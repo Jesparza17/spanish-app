@@ -6,7 +6,7 @@ import type { CefrLevel, GrammarProgress, GrammarTopic } from "./types";
 export interface VocabVerbStats {
   dueCount: number;
   totalCount: number;
-  /** Items with repetitions >= 2 — "you've seen and retained this at least once" — bucketed by level. */
+  /** Items you've retained at least once (repetitions >= 2) or explicitly mastered — bucketed by level. */
   knownByLevel: Record<CefrLevel, number>;
 }
 
@@ -22,13 +22,48 @@ export interface VerbosStats {
   averageBestScorePct: number | null;
 }
 
+export interface CefrStats {
+  /** Highest level where coverage clears the threshold and every level below it does too. Null if even A1 doesn't clear it. */
+  overallLevel: CefrLevel | null;
+  /** The level you're currently working toward (one above overallLevel), null if you've cleared C2. */
+  nextLevel: CefrLevel | null;
+  /** 0-1 coverage of nextLevel's vocab+verbs, for a "progress toward next level" readout. Null if nextLevel is null. */
+  nextLevelCoveragePct: number | null;
+  /** 0-1 coverage per level, for debugging/detail views. */
+  coverageByLevel: Record<CefrLevel, number>;
+}
+
+export interface ActivityStats {
+  currentStreakDays: number;
+  longestStreakDays: number;
+  /** date (YYYY-MM-DD, UTC) -> event count, for the last ACTIVITY_WINDOW_DAYS days. */
+  activityByDate: Record<string, number>;
+}
+
 export interface DashboardStats {
   vocabVerbs: VocabVerbStats;
   grammar: GrammarStats;
   verbos: VerbosStats;
+  cefr: CefrStats;
+  activity: ActivityStats;
 }
 
 const EMPTY_LEVEL_COUNTS: Record<CefrLevel, number> = { A1: 0, A2: 0, B1: 0, B2: 0, C1: 0, C2: 0 };
+const LEVEL_ORDER: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
+
+// You need to have actually retained a word (not just seen it once) for it to
+// count toward your level — repetitions >= 2, or a long/mastered interval so
+// the "I know this 100%" button counts immediately instead of needing a
+// second successful review first.
+const KNOWN_MIN_REPETITIONS = 2;
+const KNOWN_MIN_INTERVAL_DAYS = 365;
+
+// How much of a level's vocab+verbs you need to have retained to count as
+// having "reached" that level. Coverage is noisy while the content library
+// is still small per level, so treat this as a rough placement, not a score.
+const COVERAGE_THRESHOLD = 0.65;
+
+const ACTIVITY_WINDOW_DAYS = 84; // 12 weeks, GitHub-heatmap-style
 
 async function fetchVocabVerbStats(userId: string): Promise<VocabVerbStats> {
   const nowIso = new Date().toISOString();
@@ -38,9 +73,9 @@ async function fetchVocabVerbStats(userId: string): Promise<VocabVerbStats> {
     supabase.from("srs_state").select("*", { count: "exact", head: true }).eq("user_id", userId).lte("due_at", nowIso),
     supabase
       .from("srs_state")
-      .select("repetitions, vocab_items(cefr_level), verbs(cefr_level)")
+      .select("repetitions, interval_days, vocab_items(cefr_level), verbs(cefr_level)")
       .eq("user_id", userId)
-      .gte("repetitions", 2),
+      .or(`repetitions.gte.${KNOWN_MIN_REPETITIONS},interval_days.gte.${KNOWN_MIN_INTERVAL_DAYS}`),
   ]);
 
   const knownByLevel: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
@@ -50,6 +85,43 @@ async function fetchVocabVerbStats(userId: string): Promise<VocabVerbStats> {
   }
 
   return { dueCount: dueCount ?? 0, totalCount: totalCount ?? 0, knownByLevel };
+}
+
+async function fetchLevelTotals(): Promise<Record<CefrLevel, number>> {
+  const [{ data: vocabLevels }, { data: verbLevels }] = await Promise.all([
+    supabase.from("vocab_items").select("cefr_level"),
+    supabase.from("verbs").select("cefr_level"),
+  ]);
+
+  const totals: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
+  for (const row of [...(vocabLevels ?? []), ...(verbLevels ?? [])]) {
+    const level = row.cefr_level as CefrLevel;
+    totals[level]++;
+  }
+  return totals;
+}
+
+function computeCefrStats(totalByLevel: Record<CefrLevel, number>, knownByLevel: Record<CefrLevel, number>): CefrStats {
+  const coverageByLevel: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
+  for (const level of LEVEL_ORDER) {
+    coverageByLevel[level] = totalByLevel[level] > 0 ? knownByLevel[level] / totalByLevel[level] : 0;
+  }
+
+  let overallLevel: CefrLevel | null = null;
+  for (const level of LEVEL_ORDER) {
+    if (coverageByLevel[level] >= COVERAGE_THRESHOLD) overallLevel = level;
+    else break; // monotonic — stop at the first level you haven't cleared
+  }
+
+  const nextLevelIndex = overallLevel === null ? 0 : LEVEL_ORDER.indexOf(overallLevel) + 1;
+  const nextLevel = nextLevelIndex < LEVEL_ORDER.length ? LEVEL_ORDER[nextLevelIndex] : null;
+
+  return {
+    overallLevel,
+    nextLevel,
+    nextLevelCoveragePct: nextLevel ? Math.round(coverageByLevel[nextLevel] * 100) : null,
+    coverageByLevel,
+  };
 }
 
 function computeGrammarStats(topics: GrammarTopic[], progress: GrammarProgress[]): GrammarStats {
@@ -76,15 +148,72 @@ function computeVerbosStats(progress: GrammarProgress[]): VerbosStats {
   };
 }
 
+function dateKey(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+async function fetchActivityStats(userId: string): Promise<ActivityStats> {
+  const windowStart = new Date();
+  windowStart.setUTCDate(windowStart.getUTCDate() - (ACTIVITY_WINDOW_DAYS - 1));
+  windowStart.setUTCHours(0, 0, 0, 0);
+
+  const { data } = await supabase
+    .from("review_log")
+    .select("created_at")
+    .eq("user_id", userId)
+    .gte("created_at", windowStart.toISOString());
+
+  const activityByDate: Record<string, number> = {};
+  for (const row of data ?? []) {
+    const key = dateKey(new Date(row.created_at));
+    activityByDate[key] = (activityByDate[key] ?? 0) + 1;
+  }
+
+  // Current streak: walk back from today, stop at the first empty day. If
+  // today has no activity yet that doesn't break a streak still in progress
+  // from yesterday, so start there instead.
+  let currentStreakDays = 0;
+  const cursor = new Date();
+  cursor.setUTCHours(0, 0, 0, 0);
+  if (!activityByDate[dateKey(cursor)]) cursor.setUTCDate(cursor.getUTCDate() - 1);
+  while (activityByDate[dateKey(cursor)]) {
+    currentStreakDays++;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+
+  // Longest streak within the fetched window (a streak that started before
+  // the window would be undercounted — acceptable for a 12-week view).
+  let longestStreakDays = 0;
+  let running = 0;
+  const day = new Date(windowStart);
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  while (day.getTime() <= today.getTime()) {
+    if (activityByDate[dateKey(day)]) {
+      running++;
+      longestStreakDays = Math.max(longestStreakDays, running);
+    } else {
+      running = 0;
+    }
+    day.setUTCDate(day.getUTCDate() + 1);
+  }
+
+  return { currentStreakDays, longestStreakDays, activityByDate };
+}
+
 export async function fetchDashboardStats(userId: string): Promise<DashboardStats> {
-  const [vocabVerbs, topics, progress] = await Promise.all([
+  const [vocabVerbs, levelTotals, topics, progress, activity] = await Promise.all([
     fetchVocabVerbStats(userId),
+    fetchLevelTotals(),
     fetchGrammarTopics(),
     fetchGrammarProgress(userId),
+    fetchActivityStats(userId),
   ]);
   return {
     vocabVerbs,
     grammar: computeGrammarStats(topics, progress),
     verbos: computeVerbosStats(progress),
+    cefr: computeCefrStats(levelTotals, vocabVerbs.knownByLevel),
+    activity,
   };
 }

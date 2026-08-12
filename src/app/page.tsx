@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
+import { Flame } from "lucide-react";
 import AuthGate from "@/components/AuthGate";
+import ActivityHeatmap from "@/components/ActivityHeatmap";
 import { fetchDashboardStats, type DashboardStats } from "@/lib/dashboard";
 import type { CefrLevel } from "@/lib/types";
 
@@ -56,6 +58,37 @@ function Dashboard({ user }: { user: User }) {
           <p className="font-sans text-sm text-ink/50">Loading…</p>
         ) : (
           <>
+            <div className="rounded-2xl bg-ink shadow-card px-6 py-6 flex items-center gap-5">
+              <div className="w-20 h-20 shrink-0 rounded-full bg-marigold flex items-center justify-center">
+                <span className="font-display text-2xl font-semibold text-white">
+                  {stats.cefr.overallLevel ?? "—"}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className="font-sans text-xs tracking-[0.15em] text-white/50 uppercase mb-1">Tu nivel general</p>
+                {stats.cefr.overallLevel === null ? (
+                  <p className="font-sans text-sm text-white/70">Aún no hay suficientes datos.</p>
+                ) : stats.cefr.nextLevel ? (
+                  <p className="font-sans text-sm text-white/70">
+                    {stats.cefr.nextLevelCoveragePct}% hacia {stats.cefr.nextLevel}
+                  </p>
+                ) : (
+                  <p className="font-sans text-sm text-white/70">Nivel máximo alcanzado</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-card shadow-card px-5 py-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Flame size={20} className={stats.activity.currentStreakDays > 0 ? "text-marigold" : "text-ink/25"} />
+                <span className="font-display text-lg text-ink">
+                  {stats.activity.currentStreakDays} día{stats.activity.currentStreakDays === 1 ? "" : "s"} seguidos
+                </span>
+              </div>
+              <ActivityHeatmap activityByDate={stats.activity.activityByDate} />
+              <p className="font-sans text-xs text-ink/40 mt-3">Racha más larga: {stats.activity.longestStreakDays} días</p>
+            </div>
+
             <Link href="/vocab" className="block rounded-2xl bg-card shadow-card px-5 py-5 active:scale-[0.98] transition-transform">
               <div className="flex items-center justify-between mb-3">
                 <span className="font-display text-lg text-ink">Vocab & verbos</span>
