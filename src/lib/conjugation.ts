@@ -79,6 +79,9 @@ export type VerbEnding = "ar" | "er" | "ir";
 
 export function verbEnding(infinitive: string): VerbEnding {
   const ending = infinitive.slice(-2);
+  // "ír" (oír, reír, freír...) is the accented spelling of -ir forced by stress rules;
+  // it behaves as a regular -ir ending for stem/rule purposes.
+  if (ending === "ír") return "ir";
   if (ending !== "ar" && ending !== "er" && ending !== "ir") {
     throw new Error(`"${infinitive}" doesn't end in -ar/-er/-ir`);
   }
@@ -87,10 +90,6 @@ export function verbEnding(infinitive: string): VerbEnding {
 
 function stemOf(infinitive: string): string {
   return infinitive.slice(0, -2);
-}
-
-function isVowel(ch: string): boolean {
-  return "aeiouáéíóú".includes(ch);
 }
 
 /** Spelling-preserving stem adjustment for -car/-gar/-zar/-ger/-gir/-guir before front vowel endings (e/i). */
@@ -223,7 +222,9 @@ function regularParticiple(infinitive: string): string {
   const stem = stemOf(infinitive);
   if (ending === "ar") return stem + "ado";
   const lastStemChar = stem.slice(-1);
-  return stem + (isVowel(lastStemChar) ? "ído" : "ido");
+  // a/e/o + í is a hiatus needing a written accent (leído, traído, caído).
+  // u + i is a true diphthong with no accent (construido, huido, incluido).
+  return stem + ("aeo".includes(lastStemChar) ? "ído" : "ido");
 }
 
 export function pastParticiple(infinitive: string): string {

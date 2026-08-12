@@ -134,6 +134,9 @@ export const IRREGULAR_VERBS: Record<string, IrregularConjugation> = {
     presente: { yo: "oigo", tu: "oyes", usted: "oye", nosotros: "oímos", ustedes: "oyen" },
     preterito: { yo: "oí", tu: "oíste", usted: "oyó", nosotros: "oímos", ustedes: "oyeron" },
     presente_subjuntivo: { yo: "oiga", tu: "oigas", usted: "oiga", nosotros: "oigamos", ustedes: "oigan" },
+    // Suffixing moves the stress off the "i", so the hiatus accent from the bare
+    // infinitive is dropped: oiré/oiría, not oíré/oíría.
+    futureStem: "oir",
   },
   conducir: {
     presente: { yo: "conduzco", tu: "conduces", usted: "conduce", nosotros: "conducimos", ustedes: "conducen" },
@@ -347,5 +350,142 @@ export const IRREGULAR_VERBS: Record<string, IrregularConjugation> = {
     presente: { yo: "elijo", tu: "eliges", usted: "elige", nosotros: "elegimos", ustedes: "eligen" },
     preterito: { yo: "elegí", tu: "elegiste", usted: "eligió", nosotros: "elegimos", ustedes: "eligieron" },
     presente_subjuntivo: { yo: "elija", tu: "elijas", usted: "elija", nosotros: "elijamos", ustedes: "elijan" },
+  },
+  excluir: {
+    presente: { yo: "excluyo", tu: "excluyes", usted: "excluye", nosotros: "excluimos", ustedes: "excluyen" },
+    presente_subjuntivo: { yo: "excluya", tu: "excluyas", usted: "excluya", nosotros: "excluyamos", ustedes: "excluyan" },
+  },
+  incluir: {
+    presente: { yo: "incluyo", tu: "incluyes", usted: "incluye", nosotros: "incluimos", ustedes: "incluyen" },
+    presente_subjuntivo: { yo: "incluya", tu: "incluyas", usted: "incluya", nosotros: "incluyamos", ustedes: "incluyan" },
+  },
+  concluir: {
+    presente: { yo: "concluyo", tu: "concluyes", usted: "concluye", nosotros: "concluimos", ustedes: "concluyen" },
+    presente_subjuntivo: { yo: "concluya", tu: "concluyas", usted: "concluya", nosotros: "concluyamos", ustedes: "concluyan" },
+  },
+  distribuir: {
+    presente: {
+      yo: "distribuyo",
+      tu: "distribuyes",
+      usted: "distribuye",
+      nosotros: "distribuimos",
+      ustedes: "distribuyen",
+    },
+    presente_subjuntivo: {
+      yo: "distribuya",
+      tu: "distribuyas",
+      usted: "distribuya",
+      nosotros: "distribuyamos",
+      ustedes: "distribuyan",
+    },
+  },
+  contribuir: {
+    presente: {
+      yo: "contribuyo",
+      tu: "contribuyes",
+      usted: "contribuye",
+      nosotros: "contribuimos",
+      ustedes: "contribuyen",
+    },
+    presente_subjuntivo: {
+      yo: "contribuya",
+      tu: "contribuyas",
+      usted: "contribuya",
+      nosotros: "contribuyamos",
+      ustedes: "contribuyan",
+    },
+  },
+  sustituir: {
+    presente: {
+      yo: "sustituyo",
+      tu: "sustituyes",
+      usted: "sustituye",
+      nosotros: "sustituimos",
+      ustedes: "sustituyen",
+    },
+    presente_subjuntivo: {
+      yo: "sustituya",
+      tu: "sustituyas",
+      usted: "sustituya",
+      nosotros: "sustituyamos",
+      ustedes: "sustituyan",
+    },
+  },
+  atribuir: {
+    presente: { yo: "atribuyo", tu: "atribuyes", usted: "atribuye", nosotros: "atribuimos", ustedes: "atribuyen" },
+    presente_subjuntivo: {
+      yo: "atribuya",
+      tu: "atribuyas",
+      usted: "atribuya",
+      nosotros: "atribuyamos",
+      ustedes: "atribuyan",
+    },
+  },
+  disminuir: {
+    presente: {
+      yo: "disminuyo",
+      tu: "disminuyes",
+      usted: "disminuye",
+      nosotros: "disminuimos",
+      ustedes: "disminuyen",
+    },
+    presente_subjuntivo: {
+      yo: "disminuya",
+      tu: "disminuyas",
+      usted: "disminuya",
+      nosotros: "disminuyamos",
+      ustedes: "disminuyan",
+    },
+  },
+  fluir: {
+    presente: { yo: "fluyo", tu: "fluyes", usted: "fluye", nosotros: "fluimos", ustedes: "fluyen" },
+    presente_subjuntivo: { yo: "fluya", tu: "fluyas", usted: "fluya", nosotros: "fluyamos", ustedes: "fluyan" },
+  },
+  influir: {
+    presente: { yo: "influyo", tu: "influyes", usted: "influye", nosotros: "influimos", ustedes: "influyen" },
+    presente_subjuntivo: {
+      yo: "influya",
+      tu: "influyas",
+      usted: "influya",
+      nosotros: "influyamos",
+      ustedes: "influyan",
+    },
+  },
+  destruir: {
+    presente: { yo: "destruyo", tu: "destruyes", usted: "destruye", nosotros: "destruimos", ustedes: "destruyen" },
+    presente_subjuntivo: {
+      yo: "destruya",
+      tu: "destruyas",
+      usted: "destruya",
+      nosotros: "destruyamos",
+      ustedes: "destruyan",
+    },
+  },
+  constituir: {
+    presente: {
+      yo: "constituyo",
+      tu: "constituyes",
+      usted: "constituye",
+      nosotros: "constituimos",
+      ustedes: "constituyen",
+    },
+    presente_subjuntivo: {
+      yo: "constituya",
+      tu: "constituyas",
+      usted: "constituya",
+      nosotros: "constituyamos",
+      ustedes: "constituyan",
+    },
+  },
+  // o -> hue diphthong with h-insertion; the only common -er verb of this type.
+  oler: {
+    presente: { yo: "huelo", tu: "hueles", usted: "huele", nosotros: "olemos", ustedes: "huelen" },
+    presente_subjuntivo: { yo: "huela", tu: "huelas", usted: "huela", nosotros: "olamos", ustedes: "huelan" },
+  },
+  // e -> i stem change; ñ absorbs the following "i" in preterito usted/ustedes (riñó, not riñió).
+  reñir: {
+    presente: { yo: "riño", tu: "riñes", usted: "riñe", nosotros: "reñimos", ustedes: "riñen" },
+    preterito: { yo: "reñí", tu: "reñiste", usted: "riñó", nosotros: "reñimos", ustedes: "riñeron" },
+    presente_subjuntivo: { yo: "riña", tu: "riñas", usted: "riña", nosotros: "riñamos", ustedes: "riñan" },
   },
 };

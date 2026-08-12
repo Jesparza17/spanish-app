@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BookOpenText, GraduationCap, PenLine } from "lucide-react";
+import { Home, BookOpenText, GraduationCap, PenLine, Library } from "lucide-react";
 
 const TABS = [
   { href: "/", label: "Inicio", icon: Home },
   { href: "/vocab", label: "Vocab", icon: BookOpenText },
   { href: "/grammar", label: "Gramática", icon: GraduationCap },
   { href: "/diary", label: "Diario", icon: PenLine, disabled: true },
+  { href: "/glossary", label: "Glosario", icon: Library },
 ];
 
 export default function TabBar() {
@@ -16,7 +17,7 @@ export default function TabBar() {
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-20 bg-ink-shell/95 backdrop-blur border-t border-white/10 safe-bottom">
-      <div className="max-w-md mx-auto grid grid-cols-4">
+      <div className="max-w-md mx-auto grid grid-cols-5">
         {TABS.map(({ href, label, icon: Icon, disabled }) => {
           const active = pathname === href;
           return (
