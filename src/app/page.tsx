@@ -14,7 +14,7 @@ const NAV_CARDS = [
     icon: GraduationCap,
     title: "Gramática",
     subtitle: "Grammar rules & verb tenses",
-    active: false,
+    active: true,
   },
   {
     href: "/diary",

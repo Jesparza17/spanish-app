@@ -7,7 +7,7 @@ import { Home, BookOpenText, GraduationCap, PenLine } from "lucide-react";
 const TABS = [
   { href: "/", label: "Inicio", icon: Home },
   { href: "/vocab", label: "Vocab", icon: BookOpenText },
-  { href: "/grammar", label: "Gramática", icon: GraduationCap, disabled: true },
+  { href: "/grammar", label: "Gramática", icon: GraduationCap },
   { href: "/diary", label: "Diario", icon: PenLine, disabled: true },
 ];
 

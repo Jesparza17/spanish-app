@@ -49,3 +49,34 @@ export interface ReviewCard {
   exampleTranslation: string;
   cefrLevel: CefrLevel;
 }
+
+export interface GrammarTopic {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  explanationMd: string;
+  cefrLevel: CefrLevel;
+  sortOrder: number;
+}
+
+// A practice item in the grammar module — either a topic cloze sentence or
+// a verb-tense conjugation drill, unified the same way ReviewCard unifies
+// vocab/verbs.
+export interface GrammarExercise {
+  id: string;
+  kind: "topic" | "tense";
+  prompt: string;
+  acceptedAnswers: string[];
+  explanation: string | null;
+  cefrLevel: CefrLevel;
+}
+
+export interface GrammarProgress {
+  scopeType: "tense" | "topic";
+  scopeKey: string;
+  correctCount: number;
+  attemptCount: number;
+  bestTestScore: number | null;
+  lastPracticedAt: string | null;
+}
