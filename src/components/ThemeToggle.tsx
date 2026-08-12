@@ -12,11 +12,11 @@ export default function ThemeToggle({
   onSelect: (themeId: string | null) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2 mb-6">
+    <div className="flex gap-2 mb-6 overflow-x-auto -mx-6 px-6 pb-1 no-scrollbar">
       <button
         onClick={() => onSelect(null)}
-        className={`rounded-full px-3 py-1 font-sans text-xs transition-colors ${
-          selectedThemeId === null ? "bg-ink text-white" : "bg-white/60 text-ink/60 border border-line"
+        className={`shrink-0 rounded-full px-3.5 py-1.5 font-sans text-xs font-medium transition-colors ${
+          selectedThemeId === null ? "bg-ink text-white" : "bg-card text-ink/55 shadow-card"
         }`}
       >
         Frequency order
@@ -25,8 +25,8 @@ export default function ThemeToggle({
         <button
           key={theme.id}
           onClick={() => onSelect(theme.id)}
-          className={`rounded-full px-3 py-1 font-sans text-xs transition-colors ${
-            selectedThemeId === theme.id ? "bg-marigold text-white" : "bg-white/60 text-ink/60 border border-line"
+          className={`shrink-0 rounded-full px-3.5 py-1.5 font-sans text-xs font-medium transition-colors ${
+            selectedThemeId === theme.id ? "bg-marigold text-white" : "bg-card text-ink/55 shadow-card"
           }`}
         >
           {theme.name}

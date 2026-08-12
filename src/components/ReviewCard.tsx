@@ -4,10 +4,10 @@ import { useState } from "react";
 import type { ReviewCard as ReviewCardData } from "@/lib/types";
 
 const GRADES = [
-  { label: "Again", value: 1, className: "bg-ink/10 text-ink hover:bg-ink/20" },
-  { label: "Hard", value: 3, className: "bg-marigold/20 text-marigold-dark hover:bg-marigold/30" },
-  { label: "Good", value: 4, className: "bg-agave/15 text-agave-dark hover:bg-agave/25" },
-  { label: "Easy", value: 5, className: "bg-agave text-white hover:bg-agave-dark" },
+  { label: "Again", value: 1, className: "bg-ink/8 text-ink/70 active:bg-ink/15" },
+  { label: "Hard", value: 3, className: "bg-marigold-light text-marigold-dark active:bg-marigold/40" },
+  { label: "Good", value: 4, className: "bg-agave-light text-agave-dark active:bg-agave/30" },
+  { label: "Easy", value: 5, className: "bg-agave text-white active:bg-agave-dark" },
 ];
 
 export default function ReviewCard({
@@ -20,22 +20,24 @@ export default function ReviewCard({
   const [revealed, setRevealed] = useState(false);
 
   return (
-    <div className="rounded-xl border border-line bg-white/70 shadow-sm px-6 py-10 text-center">
-      <span className="inline-block font-sans text-xs tracking-wide uppercase text-agave-dark bg-agave/10 rounded-full px-2 py-0.5 mb-6">
-        {card.cefrLevel} · {card.kind}
+    <div className="rounded-2xl bg-card shadow-floating px-6 py-10 text-center">
+      <span className="inline-flex items-center gap-1.5 font-sans text-[11px] font-medium tracking-wide uppercase text-agave-dark bg-agave-light rounded-full px-2.5 py-1 mb-7">
+        {card.cefrLevel}
+        <span className="w-1 h-1 rounded-full bg-agave-dark/50" />
+        {card.kind === "vocab" ? "vocab" : "verb"}
       </span>
 
-      <p className="font-display text-3xl text-ink mb-1">{card.front}</p>
+      <p className="font-display text-4xl text-ink mb-1">{card.front}</p>
 
       {revealed ? (
-        <div className="mt-6 space-y-4">
-          <p className="font-sans text-lg text-ink/80">{card.translation}</p>
-          <div className="border-t border-dashed border-line pt-4">
-            <p className="font-sans italic text-ink/70">{card.example}</p>
-            <p className="font-sans text-sm text-ink/50 mt-1">{card.exampleTranslation}</p>
+        <div className="mt-7 space-y-5 animate-[fadeIn_0.15s_ease-out]">
+          <p className="font-sans text-lg text-ink/75">{card.translation}</p>
+          <div className="border-t border-line pt-5">
+            <p className="font-display italic text-[17px] text-ink/80 leading-snug">{card.example}</p>
+            <p className="font-sans text-sm text-ink/45 mt-1.5">{card.exampleTranslation}</p>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 pt-4">
+          <div className="grid grid-cols-4 gap-2 pt-3">
             {GRADES.map((g) => (
               <button
                 key={g.value}
@@ -43,7 +45,7 @@ export default function ReviewCard({
                   onGrade(g.value);
                   setRevealed(false);
                 }}
-                className={`rounded-md py-2 font-sans text-sm transition-colors ${g.className}`}
+                className={`rounded-xl py-3 font-sans text-sm font-medium transition-colors ${g.className}`}
               >
                 {g.label}
               </button>
@@ -53,7 +55,7 @@ export default function ReviewCard({
       ) : (
         <button
           onClick={() => setRevealed(true)}
-          className="mt-6 rounded-md border border-line px-5 py-2 font-sans text-sm text-ink/70 hover:border-marigold hover:text-marigold-dark transition-colors"
+          className="mt-8 rounded-full bg-ink text-white px-6 py-3 font-sans text-sm font-medium active:scale-[0.97] transition-transform"
         >
           Show answer
         </button>

@@ -54,23 +54,31 @@ function ReviewSession({ user }: { user: User }) {
   }
 
   return (
-    <main className="max-w-md mx-auto px-6 py-12">
-      <p className="font-sans text-sm tracking-wide text-agave uppercase mb-2">Review</p>
-      <h1 className="font-display text-3xl text-ink mb-6">
-        {queue.length > 0 ? `${queue.length} due` : "All caught up"}
-      </h1>
+    <main>
+      <header className="bg-ink-shell safe-top">
+        <div className="max-w-md mx-auto px-6 pt-8 pb-10">
+          <p className="font-sans text-xs tracking-[0.2em] text-marigold uppercase mb-2">Review</p>
+          <h1 className="font-display text-3xl text-white">
+            {queue.length > 0 ? `${queue.length} due` : "All caught up"}
+          </h1>
+        </div>
+      </header>
 
-      <ThemeToggle themes={themes} selectedThemeId={selectedThemeId} onSelect={setSelectedThemeId} />
+      <div className="max-w-md mx-auto px-6 -mt-6">
+        <ThemeToggle themes={themes} selectedThemeId={selectedThemeId} onSelect={setSelectedThemeId} />
 
-      {loading ? (
-        <p className="font-sans text-sm text-ink/50">Loading…</p>
-      ) : queue.length > 0 ? (
-        <ReviewCard card={queue[0]} onGrade={handleGrade} />
-      ) : (
-        <p className="font-sans text-sm text-ink/60">
-          Nothing due right now in this mode — check back later or switch modes above.
-        </p>
-      )}
+        {loading ? (
+          <p className="font-sans text-sm text-ink/50">Loading…</p>
+        ) : queue.length > 0 ? (
+          <ReviewCard card={queue[0]} onGrade={handleGrade} />
+        ) : (
+          <div className="rounded-2xl bg-card shadow-card px-6 py-10 text-center">
+            <p className="font-sans text-sm text-ink/60">
+              Nothing due right now in this mode — check back later or switch modes above.
+            </p>
+          </div>
+        )}
+      </div>
     </main>
   );
 }
