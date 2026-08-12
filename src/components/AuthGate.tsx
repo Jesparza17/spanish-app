@@ -32,7 +32,12 @@ export default function AuthGate({ children }: { children: (user: User) => React
             className="flex flex-col gap-3"
             onSubmit={async (e) => {
               e.preventDefault();
-              await supabase.auth.signInWithOtp({ email });
+              await supabase.auth.signInWithOtp({
+                email,
+                options: {
+                  emailRedirectTo: `${window.location.origin}/auth/callback`,
+                },
+              });
               setSent(true);
             }}
           >
