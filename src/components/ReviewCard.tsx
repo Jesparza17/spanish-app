@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SpeakButton from "@/components/SpeakButton";
 import type { ReviewCard as ReviewCardData } from "@/lib/types";
 
 const GRADES = [
@@ -29,13 +30,19 @@ export default function ReviewCard({
         {card.kind === "vocab" ? "vocab" : "verb"}
       </span>
 
-      <p className="font-display text-4xl text-ink mb-1">{card.front}</p>
+      <div className="flex items-center justify-center gap-2 mb-1">
+        <p className="font-display text-4xl text-ink">{card.front}</p>
+        <SpeakButton text={card.front} />
+      </div>
 
       {revealed ? (
         <div className="mt-7 space-y-5 animate-[fadeIn_0.15s_ease-out]">
           <p className="font-sans text-lg text-ink/75">{card.translation}</p>
           <div className="border-t border-line pt-5">
-            <p className="font-display italic text-[17px] text-ink/80 leading-snug">{card.example}</p>
+            <div className="flex items-start justify-center gap-2">
+              <p className="font-display italic text-[17px] text-ink/80 leading-snug">{card.example}</p>
+              <SpeakButton text={card.example} className="mt-1 shrink-0" />
+            </div>
             <p className="font-sans text-sm text-ink/45 mt-1.5">{card.exampleTranslation}</p>
           </div>
 

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "insert:content": "dotenv -e .env.local -- tsx scripts/insert-content.ts",
+    "insert:grammar-batch": "dotenv -e .env.local -- tsx scripts/insert-grammar-batch.ts",
     "seed:grammar-topics": "dotenv -e .env.local -- tsx scripts/seed-grammar-topics.ts",
     "generate:vocab": "dotenv -e .env.local -- tsx scripts/generate-content.ts vocab",
     "generate:verbs": "dotenv -e .env.local -- tsx scripts/generate-content.ts verbs",

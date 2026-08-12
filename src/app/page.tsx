@@ -86,7 +86,10 @@ function Dashboard({ user }: { user: User }) {
                 </span>
               </div>
               <ActivityHeatmap activityByDate={stats.activity.activityByDate} />
-              <p className="font-sans text-xs text-ink/40 mt-3">Racha más larga: {stats.activity.longestStreakDays} días</p>
+              <p className="font-sans text-xs text-ink/40 mt-3">
+                Racha más larga: {stats.activity.longestStreakDays} días · {stats.activity.totalReviews} repasos en
+                total · {stats.activity.reviewsThisWeek} esta semana
+              </p>
             </div>
 
             <Link href="/vocab" className="block rounded-2xl bg-card shadow-card px-5 py-5 active:scale-[0.98] transition-transform">
@@ -99,12 +102,23 @@ function Dashboard({ user }: { user: User }) {
                 )}
               </div>
               <p className="font-sans text-sm text-ink/55">
-                {stats.vocabVerbs.totalCount} palabras y verbos en tu repaso
+                {stats.vocabVerbs.totalCount} palabras y verbos en tu repaso · {stats.vocabVerbs.seenCount} vistas
               </p>
-              <div className="flex gap-1.5 mt-3 flex-wrap">
+
+              <p className="font-sans text-[10px] text-ink/35 uppercase tracking-wide mt-3">Vocab</p>
+              <div className="flex gap-1.5 mt-1 flex-wrap">
                 {LEVELS.map((level) => (
                   <span key={level} className="font-sans text-[10px] text-ink/45 bg-ink/5 rounded px-1.5 py-0.5">
-                    {level} · {stats.vocabVerbs.knownByLevel[level]}
+                    {level} · {stats.vocabVerbs.knownVocabByLevel[level]}
+                  </span>
+                ))}
+              </div>
+
+              <p className="font-sans text-[10px] text-ink/35 uppercase tracking-wide mt-2.5">Verbos</p>
+              <div className="flex gap-1.5 mt-1 flex-wrap">
+                {LEVELS.map((level) => (
+                  <span key={level} className="font-sans text-[10px] text-ink/45 bg-ink/5 rounded px-1.5 py-0.5">
+                    {level} · {stats.vocabVerbs.knownVerbByLevel[level]}
                   </span>
                 ))}
               </div>

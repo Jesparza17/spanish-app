@@ -6,12 +6,20 @@
 // script. Only needs SUPABASE_SERVICE_ROLE_KEY.
 //
 // Usage:
-//   npm run insert:content -- vocab path/to/items.json [--theme "el mercado"]
-//   npm run insert:content -- verbs path/to/items.json [--theme "la rutina diaria"]
+//   npm run insert:content -- vocab path/to/items.json [--theme "el mercado"] [--extend]
+//   npm run insert:content -- verbs path/to/items.json [--theme "la rutina diaria"] [--extend]
 //   npm run insert:content -- grammar path/to/items.json --topic ser_estar
+//
+// --extend: for an item whose lemma/infinitive already exists, merge the new
+// translation into the existing one instead of skipping it (see lib/insert.ts).
+// Use only for a small curated "additional sense" file — the default (no
+// --extend) stays skip-on-duplicate, which is what the ordinary bulk-content
+// grind wants (a duplicate there really is an accidental re-add).
 
 import { readFileSync } from "fs";
 import { insertGrammarExercises, insertVerbs, insertVocab } from "./lib/insert";
+
+const BOOLEAN_FLAGS = new Set(["extend"]);
 
 function parseArgs(argv: string[]) {
   const type = argv[2];
@@ -20,8 +28,13 @@ function parseArgs(argv: string[]) {
   for (let i = 3; i < argv.length; i++) {
     const arg = argv[i];
     if (arg.startsWith("--")) {
-      opts[arg.slice(2)] = argv[i + 1] ?? "";
-      i++;
+      const key = arg.slice(2);
+      if (BOOLEAN_FLAGS.has(key)) {
+        opts[key] = "true";
+      } else {
+        opts[key] = argv[i + 1] ?? "";
+        i++;
+      }
     } else {
       positional.push(arg);
     }
@@ -32,19 +45,28 @@ function parseArgs(argv: string[]) {
 async function main() {
   const { type, file, opts } = parseArgs(process.argv);
   if (!file) {
-    throw new Error("Usage: insert-content.ts <vocab|verbs|grammar> <file.json> [--theme name] [--topic slug]");
+    throw new Error("Usage: insert-content.ts <vocab|verbs|grammar> <file.json> [--theme name] [--topic slug] [--extend]");
   }
   const items = JSON.parse(readFileSync(file, "utf-8"));
+  const mode = opts.extend === "true" ? "extend" : "skip";
 
   switch (type) {
     case "vocab": {
-      const result = await insertVocab(items, opts.theme);
-      console.log(`vocab: ${result.inserted} inserted, ${result.skipped} skipped (already existed).`);
+      const result = await insertVocab(items, opts.theme, mode);
+      console.log(
+        mode === "extend"
+          ? `vocab: ${result.inserted} inserted, ${result.extended} extended, ${result.skipped} unchanged.`
+          : `vocab: ${result.inserted} inserted, ${result.skipped} skipped (already existed).`
+      );
       break;
     }
     case "verbs": {
-      const result = await insertVerbs(items, opts.theme);
-      console.log(`verbs: ${result.inserted} inserted, ${result.skipped} skipped (already existed).`);
+      const result = await insertVerbs(items, opts.theme, mode);
+      console.log(
+        mode === "extend"
+          ? `verbs: ${result.inserted} inserted, ${result.extended} extended, ${result.skipped} unchanged.`
+          : `verbs: ${result.inserted} inserted, ${result.skipped} skipped (already existed).`
+      );
       break;
     }
     case "grammar": {

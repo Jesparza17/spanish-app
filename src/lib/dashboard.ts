@@ -6,8 +6,13 @@ import type { CefrLevel, GrammarProgress, GrammarTopic } from "./types";
 export interface VocabVerbStats {
   dueCount: number;
   totalCount: number;
+  /** Any item reviewed at least once (repetitions >= 1) — "you've looked at this," regardless of retention. */
+  seenCount: number;
   /** Items you've retained at least once (repetitions >= 2) or explicitly mastered — bucketed by level. */
   knownByLevel: Record<CefrLevel, number>;
+  /** Same "known" items, split by kind so the dashboard can show vocab vs. verb progress separately. */
+  knownVocabByLevel: Record<CefrLevel, number>;
+  knownVerbByLevel: Record<CefrLevel, number>;
 }
 
 export interface GrammarStats {
@@ -38,6 +43,10 @@ export interface ActivityStats {
   longestStreakDays: number;
   /** date (YYYY-MM-DD, UTC) -> event count, for the last ACTIVITY_WINDOW_DAYS days. */
   activityByDate: Record<string, number>;
+  /** All-time review_log row count — unbounded, not limited to the heatmap window. */
+  totalReviews: number;
+  /** Review_log rows in the last 7 days (rolling, including today). */
+  reviewsThisWeek: number;
 }
 
 export interface DashboardStats {
@@ -68,9 +77,10 @@ const ACTIVITY_WINDOW_DAYS = 84; // 12 weeks, GitHub-heatmap-style
 async function fetchVocabVerbStats(userId: string): Promise<VocabVerbStats> {
   const nowIso = new Date().toISOString();
 
-  const [{ count: totalCount }, { count: dueCount }, { data: knownRows }] = await Promise.all([
+  const [{ count: totalCount }, { count: dueCount }, { count: seenCount }, { data: knownRows }] = await Promise.all([
     supabase.from("srs_state").select("*", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("srs_state").select("*", { count: "exact", head: true }).eq("user_id", userId).lte("due_at", nowIso),
+    supabase.from("srs_state").select("*", { count: "exact", head: true }).eq("user_id", userId).gte("repetitions", 1),
     supabase
       .from("srs_state")
       .select("repetitions, interval_days, vocab_items(cefr_level), verbs(cefr_level)")
@@ -79,12 +89,26 @@ async function fetchVocabVerbStats(userId: string): Promise<VocabVerbStats> {
   ]);
 
   const knownByLevel: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
+  const knownVocabByLevel: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
+  const knownVerbByLevel: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
   for (const row of knownRows ?? []) {
-    const level: CefrLevel | undefined = (row as any).vocab_items?.cefr_level ?? (row as any).verbs?.cefr_level;
-    if (level) knownByLevel[level]++;
+    const vocabLevel: CefrLevel | undefined = (row as any).vocab_items?.cefr_level;
+    const verbLevel: CefrLevel | undefined = (row as any).verbs?.cefr_level;
+    const level = vocabLevel ?? verbLevel;
+    if (!level) continue;
+    knownByLevel[level]++;
+    if (vocabLevel) knownVocabByLevel[level]++;
+    else knownVerbByLevel[level]++;
   }
 
-  return { dueCount: dueCount ?? 0, totalCount: totalCount ?? 0, knownByLevel };
+  return {
+    dueCount: dueCount ?? 0,
+    totalCount: totalCount ?? 0,
+    seenCount: seenCount ?? 0,
+    knownByLevel,
+    knownVocabByLevel,
+    knownVerbByLevel,
+  };
 }
 
 async function fetchLevelTotals(): Promise<Record<CefrLevel, number>> {
@@ -157,16 +181,24 @@ async function fetchActivityStats(userId: string): Promise<ActivityStats> {
   windowStart.setUTCDate(windowStart.getUTCDate() - (ACTIVITY_WINDOW_DAYS - 1));
   windowStart.setUTCHours(0, 0, 0, 0);
 
-  const { data } = await supabase
-    .from("review_log")
-    .select("created_at")
-    .eq("user_id", userId)
-    .gte("created_at", windowStart.toISOString());
+  const [{ data }, { count: totalReviews }] = await Promise.all([
+    supabase.from("review_log").select("created_at").eq("user_id", userId).gte("created_at", windowStart.toISOString()),
+    // Unbounded — not limited to the heatmap window, so this stays accurate once usage outgrows 12 weeks.
+    supabase.from("review_log").select("*", { count: "exact", head: true }).eq("user_id", userId),
+  ]);
 
   const activityByDate: Record<string, number> = {};
   for (const row of data ?? []) {
     const key = dateKey(new Date(row.created_at));
     activityByDate[key] = (activityByDate[key] ?? 0) + 1;
+  }
+
+  let reviewsThisWeek = 0;
+  const weekCursor = new Date();
+  weekCursor.setUTCHours(0, 0, 0, 0);
+  for (let i = 0; i < 7; i++) {
+    reviewsThisWeek += activityByDate[dateKey(weekCursor)] ?? 0;
+    weekCursor.setUTCDate(weekCursor.getUTCDate() - 1);
   }
 
   // Current streak: walk back from today, stop at the first empty day. If
@@ -198,7 +230,7 @@ async function fetchActivityStats(userId: string): Promise<ActivityStats> {
     day.setUTCDate(day.getUTCDate() + 1);
   }
 
-  return { currentStreakDays, longestStreakDays, activityByDate };
+  return { currentStreakDays, longestStreakDays, activityByDate, totalReviews: totalReviews ?? 0, reviewsThisWeek };
 }
 
 export async function fetchDashboardStats(userId: string): Promise<DashboardStats> {

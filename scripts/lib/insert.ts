@@ -52,12 +52,46 @@ export async function enrollAllUsers(column: "vocab_item_id" | "verb_id", ids: s
   if (upsertError) throw upsertError;
 }
 
-export async function insertVocab(items: VocabInsert[], theme?: string): Promise<{ inserted: number; skipped: number }> {
-  const { data: existing } = await supabaseAdmin.from("vocab_items").select("lemma");
-  const existingLemmas = new Set((existing ?? []).map((r) => r.lemma.toLowerCase()));
-  const fresh = items.filter((it) => !existingLemmas.has(it.lemma.toLowerCase()));
-  const skipped = items.length - fresh.length;
-  if (!fresh.length) return { inserted: 0, skipped };
+export type InsertMode = "skip" | "extend";
+
+// Appends a new sense to an existing translation, e.g. "bank" + "bench" ->
+// "bank; bench". Idempotent — if the new sense is already present, returns
+// the original unchanged, so re-running the same extend batch twice is safe.
+function mergeTranslation(existing: string, addition: string): string {
+  const already = existing
+    .split(";")
+    .map((s) => s.trim().toLowerCase())
+    .includes(addition.trim().toLowerCase());
+  return already ? existing : `${existing}; ${addition.trim()}`;
+}
+
+export async function insertVocab(
+  items: VocabInsert[],
+  theme?: string,
+  mode: InsertMode = "skip"
+): Promise<{ inserted: number; extended: number; skipped: number }> {
+  const { data: existing } = await supabaseAdmin.from("vocab_items").select("id, lemma, translation");
+  const existingByLemma = new Map((existing ?? []).map((r) => [r.lemma.toLowerCase(), r]));
+
+  const fresh: VocabInsert[] = [];
+  let extended = 0;
+  for (const item of items) {
+    const match = existingByLemma.get(item.lemma.toLowerCase());
+    if (!match) {
+      fresh.push(item);
+      continue;
+    }
+    if (mode === "extend") {
+      const merged = mergeTranslation(match.translation, item.translation);
+      if (merged !== match.translation) {
+        const { error } = await supabaseAdmin.from("vocab_items").update({ translation: merged }).eq("id", match.id);
+        if (error) throw error;
+        extended++;
+      }
+    }
+  }
+  const skipped = items.length - fresh.length - extended;
+  if (!fresh.length) return { inserted: 0, extended, skipped };
 
   const { data: inserted, error } = await supabaseAdmin
     .from("vocab_items")
@@ -73,15 +107,36 @@ export async function insertVocab(items: VocabInsert[], theme?: string): Promise
   }
 
   await enrollAllUsers("vocab_item_id", (inserted ?? []).map((r) => r.id));
-  return { inserted: inserted?.length ?? 0, skipped };
+  return { inserted: inserted?.length ?? 0, extended, skipped };
 }
 
-export async function insertVerbs(items: VerbInsert[], theme?: string): Promise<{ inserted: number; skipped: number }> {
-  const { data: existing } = await supabaseAdmin.from("verbs").select("infinitive");
-  const existingInfinitives = new Set((existing ?? []).map((r) => r.infinitive.toLowerCase()));
-  const fresh = items.filter((it) => !existingInfinitives.has(it.infinitive.toLowerCase()));
-  const skipped = items.length - fresh.length;
-  if (!fresh.length) return { inserted: 0, skipped };
+export async function insertVerbs(
+  items: VerbInsert[],
+  theme?: string,
+  mode: InsertMode = "skip"
+): Promise<{ inserted: number; extended: number; skipped: number }> {
+  const { data: existing } = await supabaseAdmin.from("verbs").select("id, infinitive, translation");
+  const existingByInfinitive = new Map((existing ?? []).map((r) => [r.infinitive.toLowerCase(), r]));
+
+  const fresh: VerbInsert[] = [];
+  let extended = 0;
+  for (const item of items) {
+    const match = existingByInfinitive.get(item.infinitive.toLowerCase());
+    if (!match) {
+      fresh.push(item);
+      continue;
+    }
+    if (mode === "extend") {
+      const merged = mergeTranslation(match.translation, item.translation);
+      if (merged !== match.translation) {
+        const { error } = await supabaseAdmin.from("verbs").update({ translation: merged }).eq("id", match.id);
+        if (error) throw error;
+        extended++;
+      }
+    }
+  }
+  const skipped = items.length - fresh.length - extended;
+  if (!fresh.length) return { inserted: 0, extended, skipped };
 
   const { data: inserted, error } = await supabaseAdmin
     .from("verbs")
@@ -95,7 +150,7 @@ export async function insertVerbs(items: VerbInsert[], theme?: string): Promise<
   }
 
   await enrollAllUsers("verb_id", (inserted ?? []).map((r) => r.id));
-  return { inserted: inserted?.length ?? 0, skipped };
+  return { inserted: inserted?.length ?? 0, extended, skipped };
 }
 
 export async function insertGrammarExercises(topicSlug: string, items: GrammarExerciseInsert[]): Promise<{ inserted: number }> {

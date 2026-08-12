@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SpeakButton from "@/components/SpeakButton";
 
 export interface ExerciseResult {
   correct: boolean;
@@ -43,7 +44,10 @@ export default function ExerciseCard({
   return (
     <div className="rounded-2xl bg-card shadow-floating px-6 py-8">
       {translation && <p className="font-sans text-xs text-ink/45 uppercase tracking-wide mb-2">{translation}</p>}
-      <p className="font-display text-xl text-ink mb-5 leading-snug">{prompt}</p>
+      <div className="flex items-start gap-2 mb-5">
+        <p className="font-display text-xl text-ink leading-snug">{prompt}</p>
+        <SpeakButton text={prompt} className="mt-1 shrink-0" />
+      </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input

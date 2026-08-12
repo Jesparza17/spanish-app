@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AuthGate from "@/components/AuthGate";
+import SpeakButton from "@/components/SpeakButton";
 import { fetchAllVocab, fetchAllVerbs } from "@/lib/glossary";
 import type { VocabItem, Verb } from "@/lib/types";
 
@@ -86,7 +87,10 @@ function GlossaryHome() {
             {filteredVocab.map((item) => (
               <div key={item.id} className="rounded-2xl bg-card shadow-card px-5 py-4">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-display text-base text-ink">{item.lemma}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-display text-base text-ink">{item.lemma}</span>
+                    <SpeakButton text={item.lemma} />
+                  </span>
                   <span className="font-sans text-[10px] font-medium text-agave-dark bg-agave-light rounded-full px-2 py-0.5 shrink-0 uppercase tracking-wide">
                     {item.cefr_level}
                   </span>
@@ -106,7 +110,10 @@ function GlossaryHome() {
             {filteredVerbs.map((v) => (
               <div key={v.id} className="rounded-2xl bg-card shadow-card px-5 py-4">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-display text-base text-ink">{v.infinitive}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-display text-base text-ink">{v.infinitive}</span>
+                    <SpeakButton text={v.infinitive} />
+                  </span>
                   <span className="font-sans text-[10px] font-medium text-agave-dark bg-agave-light rounded-full px-2 py-0.5 shrink-0 uppercase tracking-wide">
                     {v.cefr_level}
                   </span>
