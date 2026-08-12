@@ -10,12 +10,11 @@ import { fetchDashboardStats, type DashboardStats } from "@/lib/dashboard";
 import { useLanguage, type Language } from "@/lib/language";
 import type { CefrLevel } from "@/lib/types";
 
-const LANGUAGES: { code: Language; flag: string; label: string; active: boolean }[] = [
-  { code: "es", flag: "🇲🇽", label: "Español", active: true },
-  { code: "pt", flag: "🇧🇷", label: "Português", active: true },
+const LANGUAGES: { code: Language; flag: string; label: string }[] = [
+  { code: "es", flag: "🇲🇽", label: "Español" },
+  { code: "pt", flag: "🇧🇷", label: "Português" },
+  { code: "fr", flag: "🇫🇷", label: "Français" },
 ];
-
-const COMING_SOON: { flag: string; label: string }[] = [{ flag: "🇫🇷", label: "Français" }];
 
 const LEVELS: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
@@ -53,13 +52,6 @@ function Dashboard({ user }: { user: User }) {
               <span className="block text-xl">{lang.flag}</span>
               <span className="block font-sans text-[11px] font-medium mt-1">{lang.label}</span>
             </button>
-          ))}
-          {COMING_SOON.map((lang) => (
-            <div key={lang.label} className="flex-1 rounded-2xl px-3 py-3 text-center shadow-card bg-card text-ink/35 opacity-60">
-              <span className="block text-xl">{lang.flag}</span>
-              <span className="block font-sans text-[11px] font-medium mt-1">{lang.label}</span>
-              <span className="block font-sans text-[9px] text-ink/35 mt-0.5 uppercase tracking-wide">Próximamente</span>
-            </div>
           ))}
         </div>
 

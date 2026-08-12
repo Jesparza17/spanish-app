@@ -6,7 +6,7 @@
 import { supabaseAdmin } from "./supabaseAdmin";
 
 export type CefrLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
-export type Language = "es" | "pt";
+export type Language = "es" | "pt" | "fr";
 
 export interface VocabInsert {
   lemma: string;

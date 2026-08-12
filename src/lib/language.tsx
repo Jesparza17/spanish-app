@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
-export type Language = "es" | "pt";
+export type Language = "es" | "pt" | "fr";
 
 const STORAGE_KEY = "cuaderno-language";
 
@@ -18,7 +18,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "es" || stored === "pt") setLanguageState(stored);
+    if (stored === "es" || stored === "pt" || stored === "fr") setLanguageState(stored);
   }, []);
 
   function setLanguage(next: Language) {

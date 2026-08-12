@@ -2,6 +2,7 @@ import { supabase } from "./supabaseClient";
 import { fetchGrammarProgress, fetchGrammarTopics } from "./grammarQueue";
 import { CORE_TENSES } from "./conjugation";
 import { CORE_TENSES_PT } from "./conjugationPt";
+import { CORE_TENSES_FR } from "./conjugationFr";
 import type { Language } from "./language";
 import type { CefrLevel, GrammarProgress, GrammarTopic } from "./types";
 
@@ -164,7 +165,12 @@ function computeCefrStats(totalByLevel: Record<CefrLevel, number>, knownByLevel:
 }
 
 function computeGrammarStats(topics: GrammarTopic[], progress: GrammarProgress[]): GrammarStats {
-  const topicProgress = progress.filter((p) => p.scopeType === "topic" && p.attemptCount > 0);
+  // grammar_progress has no language column — scope_key for topics is the
+  // topic slug, so cross-reference against this language's own topic list
+  // rather than counting every topic-scope row (which would double-count
+  // progress from other languages' topics that happen to share scope_type).
+  const topicSlugs = new Set(topics.map((t) => t.slug));
+  const topicProgress = progress.filter((p) => p.scopeType === "topic" && p.attemptCount > 0 && topicSlugs.has(p.scopeKey));
   const avg = topicProgress.length
     ? topicProgress.reduce((sum, p) => sum + p.correctCount / p.attemptCount, 0) / topicProgress.length
     : null;
@@ -175,13 +181,24 @@ function computeGrammarStats(topics: GrammarTopic[], progress: GrammarProgress[]
   };
 }
 
+// Mirrors grammarQueue.ts's tenseScopeKey — Spanish keys are unprefixed,
+// Portuguese/French are "pt:"/"fr:"-prefixed. Needed here too so a tense
+// row from one language's practice doesn't get counted on another
+// language's dashboard.
+function scopeKeyBelongsToLanguage(scopeKey: string, language: Language): boolean {
+  if (language === "es") return !scopeKey.includes(":");
+  return scopeKey.startsWith(`${language}:`);
+}
+
 function computeVerbosStats(progress: GrammarProgress[], language: Language): VerbosStats {
-  const tenseProgress = progress.filter((p) => p.scopeType === "tense" && p.bestTestScore !== null);
+  const tenseProgress = progress.filter(
+    (p) => p.scopeType === "tense" && p.bestTestScore !== null && scopeKeyBelongsToLanguage(p.scopeKey, language)
+  );
   const avg = tenseProgress.length
     ? tenseProgress.reduce((sum, p) => sum + (p.bestTestScore ?? 0), 0) / tenseProgress.length
     : null;
   return {
-    tensesTotal: language === "pt" ? CORE_TENSES_PT.length : CORE_TENSES.length,
+    tensesTotal: language === "pt" ? CORE_TENSES_PT.length : language === "fr" ? CORE_TENSES_FR.length : CORE_TENSES.length,
     tensesTested: tenseProgress.length,
     averageBestScorePct: avg !== null ? Math.round(avg * 100) : null,
   };

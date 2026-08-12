@@ -12,8 +12,10 @@ import {
   type TenseQuestion,
   type VerbCategory,
 } from "@/lib/grammarQueue";
+import { buildFillBlankPrompt } from "@/lib/fillBlankTemplates";
 import { CORE_TENSES, TENSE_LABELS } from "@/lib/conjugation";
 import { CORE_TENSES_PT, TENSE_LABELS_PT } from "@/lib/conjugationPt";
+import { CORE_TENSES_FR, TENSE_LABELS_FR } from "@/lib/conjugationFr";
 import { useLanguage } from "@/lib/language";
 
 const TEST_LENGTH = 12;
@@ -24,9 +26,11 @@ const CATEGORIES: { value: VerbCategory; label: string }[] = [
   { value: "mix", label: "Mix" },
 ];
 
+type Mode = "practice" | "fillBlank" | "test";
+
 function TenseSession({ user, tense, label }: { user: User; tense: string; label: string }) {
   const { language } = useLanguage();
-  const [mode, setMode] = useState<"practice" | "test">("practice");
+  const [mode, setMode] = useState<Mode>("practice");
   const [category, setCategory] = useState<VerbCategory>("mix");
   const [questions, setQuestions] = useState<TenseQuestion[]>([]);
   const [index, setIndex] = useState(0);
@@ -34,10 +38,10 @@ function TenseSession({ user, tense, label }: { user: User; tense: string; label
   const [loading, setLoading] = useState(true);
   const [finished, setFinished] = useState(false);
 
-  const startPractice = useCallback(
-    async (cat: VerbCategory = category) => {
+  const startDrill = useCallback(
+    async (nextMode: "practice" | "fillBlank", cat: VerbCategory = category) => {
       setLoading(true);
-      setMode("practice");
+      setMode(nextMode);
       setCategory(cat);
       setFinished(false);
       setIndex(0);
@@ -59,11 +63,11 @@ function TenseSession({ user, tense, label }: { user: User; tense: string; label
   }, [tense, language]);
 
   useEffect(() => {
-    startPractice();
+    startDrill("practice");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tense, language]);
 
-  async function handleNextPractice() {
+  async function handleNextDrill() {
     setLoading(true);
     setQuestions(await buildTenseQuestions(tense, 1, category, language));
     setIndex(0);
@@ -82,11 +86,15 @@ function TenseSession({ user, tense, label }: { user: User; tense: string; label
   }
 
   function handleNext(result: ExerciseResult) {
-    if (mode === "practice") handleNextPractice();
-    else handleNextTest(result.correct);
+    if (mode === "test") handleNextTest(result.correct);
+    else handleNextDrill();
   }
 
   const current = questions[index];
+  const displayPrompt =
+    current && mode === "fillBlank"
+      ? buildFillBlankPrompt(language, tense, current.person, current.infinitive, current.polarity)
+      : current?.prompt;
 
   return (
     <main>
@@ -100,16 +108,24 @@ function TenseSession({ user, tense, label }: { user: User; tense: string; label
       <div className="max-w-md mx-auto px-6 -mt-6 space-y-5 pb-10">
         <div className="flex gap-2">
           <button
-            onClick={() => startPractice()}
-            className={`flex-1 rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors ${
+            onClick={() => startDrill("practice")}
+            className={`flex-1 rounded-full px-3 py-2 font-sans text-sm font-medium transition-colors ${
               mode === "practice" ? "bg-ink text-white" : "bg-card text-ink/55 shadow-card"
             }`}
           >
             Practice
           </button>
           <button
+            onClick={() => startDrill("fillBlank")}
+            className={`flex-1 rounded-full px-3 py-2 font-sans text-sm font-medium transition-colors ${
+              mode === "fillBlank" ? "bg-ink text-white" : "bg-card text-ink/55 shadow-card"
+            }`}
+          >
+            Fill blank
+          </button>
+          <button
             onClick={startTest}
-            className={`flex-1 rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors ${
+            className={`flex-1 rounded-full px-3 py-2 font-sans text-sm font-medium transition-colors ${
               mode === "test" ? "bg-ink text-white" : "bg-card text-ink/55 shadow-card"
             }`}
           >
@@ -117,12 +133,12 @@ function TenseSession({ user, tense, label }: { user: User; tense: string; label
           </button>
         </div>
 
-        {mode === "practice" && (
+        {(mode === "practice" || mode === "fillBlank") && (
           <div className="flex gap-2">
             {CATEGORIES.map((c) => (
               <button
                 key={c.value}
-                onClick={() => startPractice(c.value)}
+                onClick={() => startDrill(mode, c.value)}
                 className={`flex-1 rounded-full px-3 py-1.5 font-sans text-xs font-medium transition-colors ${
                   category === c.value ? "bg-marigold text-white" : "bg-card text-ink/55 shadow-card"
                 }`}
@@ -163,7 +179,7 @@ function TenseSession({ user, tense, label }: { user: User; tense: string; label
         ) : current ? (
           <ExerciseCard
             key={`${mode}-${index}-${current.verbId}-${current.prompt}`}
-            prompt={current.prompt}
+            prompt={displayPrompt!}
             translation={current.translation}
             onGrade={async (answer) => {
               const correct = isCorrectAnswer(answer, [current.answer]);
@@ -181,8 +197,8 @@ export default function TensePage() {
   const params = useParams<{ tense: string }>();
   const tense = params.tense;
   const { language } = useLanguage();
-  const tenses = language === "pt" ? CORE_TENSES_PT : CORE_TENSES;
-  const labels: Record<string, string> = language === "pt" ? TENSE_LABELS_PT : TENSE_LABELS;
+  const tenses = language === "pt" ? CORE_TENSES_PT : language === "fr" ? CORE_TENSES_FR : CORE_TENSES;
+  const labels: Record<string, string> = language === "pt" ? TENSE_LABELS_PT : language === "fr" ? TENSE_LABELS_FR : TENSE_LABELS;
   const valid = (tenses as string[]).includes(tense);
 
   if (!valid) {

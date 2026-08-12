@@ -8,6 +8,7 @@ import AuthGate from "@/components/AuthGate";
 import { fetchGrammarProgress, fetchGrammarTopics, tenseScopeKey } from "@/lib/grammarQueue";
 import { CORE_TENSES, TENSE_CEFR_LEVELS, TENSE_LABELS } from "@/lib/conjugation";
 import { CORE_TENSES_PT, TENSE_CEFR_LEVELS_PT, TENSE_LABELS_PT } from "@/lib/conjugationPt";
+import { CORE_TENSES_FR, TENSE_CEFR_LEVELS_FR, TENSE_LABELS_FR } from "@/lib/conjugationFr";
 import { useLanguage } from "@/lib/language";
 import type { GrammarProgress, GrammarTopic } from "@/lib/types";
 
@@ -26,9 +27,10 @@ function GrammarHome({ user }: { user: User }) {
   const [progress, setProgress] = useState<GrammarProgress[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const tenses = language === "pt" ? CORE_TENSES_PT : CORE_TENSES;
-  const tenseLabels: Record<string, string> = language === "pt" ? TENSE_LABELS_PT : TENSE_LABELS;
-  const tenseCefr: Record<string, string> = language === "pt" ? TENSE_CEFR_LEVELS_PT : TENSE_CEFR_LEVELS;
+  const tenses = language === "pt" ? CORE_TENSES_PT : language === "fr" ? CORE_TENSES_FR : CORE_TENSES;
+  const tenseLabels: Record<string, string> = language === "pt" ? TENSE_LABELS_PT : language === "fr" ? TENSE_LABELS_FR : TENSE_LABELS;
+  const tenseCefr: Record<string, string> =
+    language === "pt" ? TENSE_CEFR_LEVELS_PT : language === "fr" ? TENSE_CEFR_LEVELS_FR : TENSE_CEFR_LEVELS;
 
   useEffect(() => {
     setLoading(true);

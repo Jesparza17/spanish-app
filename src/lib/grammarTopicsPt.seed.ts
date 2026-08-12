@@ -9,6 +9,52 @@ import type { GrammarTopicSeed } from "./grammarTopics.seed";
 
 export const GRAMMAR_TOPICS_PT: GrammarTopicSeed[] = [
   {
+    slug: "intro_pt",
+    title: "Introdução ao português",
+    category: "introduction",
+    cefrLevel: "A1",
+    sortOrder: 1,
+    language: "pt",
+    explanationMd: `Uma visão geral rápida antes de entrar nos temas específicos — este curso
+usa o **português do Brasil**, então algumas notas aqui não se aplicam a
+Portugal (o pronome *você*, certas palavras, a pronúncia).
+
+**Pronúncia — alguns sons que não existem em espanhol/inglês:**
+- **ão** é um som nasal, meio "ãu" — *pão*, *não*, *coração*.
+- **lh** soa como o "lli" de "million" — *filho*, *trabalho*.
+- **nh** soa como o "ñ" espanhol — *amanhã*, *banho*.
+- **ç** soa sempre como "s" — *começar*, *coração*.
+- No fim da palavra, **-e** e **-o** geralmente são reduzidos: *dente* soa
+  quase como "dentchi", *carro* quase como "carru".
+
+**Gênero e artigos** — como em espanhol, todo substantivo é masculino ou
+feminino (*o livro*, *a mesa*), com concordância nos adjetivos. Veja o
+tema "Gênero e concordância" para as regras completas.
+
+**Você, não tu** — no Brasil, o pronome do dia a dia para "you" é
+**você**, que usa a conjugação da terceira pessoa. Veja o tema "Você vs.
+tu" para o porquê.
+
+**Ordem das palavras** — sujeito-verbo-objeto, como em português/espanhol/
+inglês: *Eu como pão.* As perguntas de sim/não geralmente não invertem a
+ordem, só mudam a entonação: *Você fala inglês?*
+
+**Negação** — *não* vem antes do verbo: *Eu não sei.* Diferente do
+espanhol, o português não costuma duplicar a negação com outra palavra
+negativa depois.
+
+**Frases essenciais para começar:**
+- *Oi!* / *Olá!* — Hi!
+- *Bom dia* / *Boa tarde* / *Boa noite* — Good morning/afternoon/evening
+- *Por favor* / *Obrigado* (homem) / *Obrigada* (mulher) — Please / Thank
+  you (thank-you agrees with the speaker's gender, not the listener's)
+- *Com licença* — Excuse me
+- *Desculpa* — Sorry
+- *Tudo bem?* — How's it going? (extremely common, very casual)
+
+A partir daqui, os temas seguintes aprofundam cada uma dessas ideias.`,
+  },
+  {
     slug: "pronomes_pessoais_pt",
     title: "Você vs. tu",
     category: "fundamentals",

@@ -1,13 +1,13 @@
 // One-time (re-runnable) seed for the Gramática topic list — explanations are
-// hand-authored in src/lib/grammarTopics.seed.ts (Spanish) and
-// src/lib/grammarTopicsPt.seed.ts (Portuguese), not pipeline-generated.
+// hand-authored per language (grammarTopics*.seed.ts), not pipeline-generated.
 // Run with: npm run seed:grammar-topics
 
 import { GRAMMAR_TOPICS, type GrammarTopicSeed } from "../src/lib/grammarTopics.seed";
 import { GRAMMAR_TOPICS_PT } from "../src/lib/grammarTopicsPt.seed";
+import { GRAMMAR_TOPICS_FR } from "../src/lib/grammarTopicsFr.seed";
 import { supabaseAdmin } from "./lib/supabaseAdmin";
 
-const ALL: GrammarTopicSeed[] = [...GRAMMAR_TOPICS, ...GRAMMAR_TOPICS_PT];
+const ALL: GrammarTopicSeed[] = [...GRAMMAR_TOPICS, ...GRAMMAR_TOPICS_PT, ...GRAMMAR_TOPICS_FR];
 
 async function main() {
   const { error } = await supabaseAdmin.from("grammar_topics").upsert(
@@ -23,7 +23,9 @@ async function main() {
     { onConflict: "slug" }
   );
   if (error) throw error;
-  console.log(`Seeded ${ALL.length} grammar topics (${GRAMMAR_TOPICS.length} es, ${GRAMMAR_TOPICS_PT.length} pt).`);
+  console.log(
+    `Seeded ${ALL.length} grammar topics (${GRAMMAR_TOPICS.length} es, ${GRAMMAR_TOPICS_PT.length} pt, ${GRAMMAR_TOPICS_FR.length} fr).`
+  );
 }
 
 main().catch((err) => {

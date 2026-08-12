@@ -23,6 +23,19 @@ import {
   type TensePt,
   type ConjugableTensePt,
 } from "./conjugationPt";
+import {
+  PERSONS_FR,
+  PERSON_LABELS_FR,
+  conjugateFr,
+  conjugateImperativeFr,
+  isFullySupportedFr,
+  isIrregularFormFr,
+  type PersonFr,
+  type TenseFr,
+  type ConjugableTenseFr,
+  type ImperativePersonFr,
+  type ImperativePolarityFr,
+} from "./conjugationFr";
 import { logReviewEvent } from "./reviewLog";
 import type { Language } from "./language";
 import type { GrammarProgress, GrammarTopic } from "./types";
@@ -146,7 +159,7 @@ async function fetchEligibleVerbs(language: Language): Promise<EligibleVerb[]> {
     .eq("verified", true)
     .eq("language", language);
   if (error) throw error;
-  const supported = language === "pt" ? isFullySupportedPt : isFullySupported;
+  const supported = language === "pt" ? isFullySupportedPt : language === "fr" ? isFullySupportedFr : isFullySupported;
   return (data ?? []).filter((v: EligibleVerb) => supported(v.infinitive, v.verb_type));
 }
 
@@ -156,6 +169,9 @@ export interface TenseQuestion {
   translation: string;
   prompt: string;
   answer: string;
+  /** Raw person/polarity behind this question, for callers that want to build their own prompt (e.g. fill-in-the-blank). */
+  person: string;
+  polarity?: "affirmative" | "negative";
 }
 
 const IMPERATIVE_PERSONS: ImperativePerson[] = ["tu", "usted", "nosotros", "ustedes"];
@@ -212,6 +228,8 @@ export async function buildTenseQuestions(
           translation: c.verb.translation,
           prompt: `${c.verb.infinitive} — ${label}`,
           answer,
+          person: c.person,
+          polarity: c.polarity,
         });
       }
       return questions;
@@ -235,6 +253,62 @@ export async function buildTenseQuestions(
         translation: c.verb.translation,
         prompt: `${c.verb.infinitive} — ${PERSON_LABELS_PT[c.person]}`,
         answer,
+        person: c.person,
+      });
+    }
+    return questions;
+  }
+
+  if (language === "fr") {
+    if (tense === "imperatif") {
+      const IMPERATIVE_PERSONS_FR: ImperativePersonFr[] = ["tu", "nous", "vous"];
+      const candidates: { verb: EligibleVerb; person: ImperativePersonFr; polarity: ImperativePolarityFr }[] = [];
+      for (const verb of pool) {
+        for (const person of IMPERATIVE_PERSONS_FR) {
+          for (const polarity of IMPERATIVE_POLARITIES) {
+            const irregular = isIrregularFormFr(verb.infinitive, tense as TenseFr, person, polarity as ImperativePolarityFr);
+            if (matchesCategory(irregular, category)) candidates.push({ verb, person, polarity: polarity as ImperativePolarityFr });
+          }
+        }
+      }
+      if (!candidates.length) return [];
+      const questions: TenseQuestion[] = [];
+      for (let i = 0; i < count; i++) {
+        const c = candidates[Math.floor(Math.random() * candidates.length)];
+        const answer = conjugateImperativeFr(c.verb.infinitive, c.person, c.polarity);
+        const label = `${c.polarity === "negative" ? "ne...pas · " : ""}${PERSON_LABELS_FR[c.person]}`;
+        questions.push({
+          verbId: c.verb.id,
+          infinitive: c.verb.infinitive,
+          translation: c.verb.translation,
+          prompt: `${c.verb.infinitive} — ${label}`,
+          answer,
+          person: c.person,
+          polarity: c.polarity,
+        });
+      }
+      return questions;
+    }
+
+    const candidates: { verb: EligibleVerb; person: PersonFr }[] = [];
+    for (const verb of pool) {
+      for (const person of PERSONS_FR) {
+        const irregular = isIrregularFormFr(verb.infinitive, tense as TenseFr, person);
+        if (matchesCategory(irregular, category)) candidates.push({ verb, person });
+      }
+    }
+    if (!candidates.length) return [];
+    const questions: TenseQuestion[] = [];
+    for (let i = 0; i < count; i++) {
+      const c = candidates[Math.floor(Math.random() * candidates.length)];
+      const answer = conjugateFr(c.verb.infinitive, tense as ConjugableTenseFr, c.person);
+      questions.push({
+        verbId: c.verb.id,
+        infinitive: c.verb.infinitive,
+        translation: c.verb.translation,
+        prompt: `${c.verb.infinitive} — ${PERSON_LABELS_FR[c.person]}`,
+        answer,
+        person: c.person,
       });
     }
     return questions;
@@ -263,6 +337,8 @@ export async function buildTenseQuestions(
         translation: c.verb.translation,
         prompt: `${c.verb.infinitive} — ${label}`,
         answer,
+        person: c.person,
+        polarity: c.polarity,
       });
     }
     return questions;
@@ -287,6 +363,7 @@ export async function buildTenseQuestions(
       translation: c.verb.translation,
       prompt: `${c.verb.infinitive} — ${PERSON_LABELS[c.person]}`,
       answer,
+      person: c.person,
     });
   }
   return questions;
@@ -335,13 +412,14 @@ export async function recordTopicAttempt(userId: string, topicSlug: string, corr
   await logReviewEvent(userId, "topic_attempt");
 }
 
-// Spanish and Portuguese tense identifiers collide (both have "presente",
-// "imperativo"...), and grammar_progress.scope_key has no language column
-// to disambiguate. Spanish keeps its existing unprefixed keys (so prior
-// progress isn't orphaned); Portuguese gets a "pt:" prefix, since it's
-// starting from zero rows anyway.
+// Tense identifiers collide across languages (Spanish/Portuguese both have
+// "presente"; French's own names are distinct but prefixed anyway for
+// consistency), and grammar_progress.scope_key has no language column to
+// disambiguate. Spanish keeps its existing unprefixed keys (so prior
+// progress isn't orphaned); Portuguese and French get a prefix, since both
+// start from zero rows.
 export function tenseScopeKey(tense: string, language: Language): string {
-  return language === "pt" ? `pt:${tense}` : tense;
+  return language === "es" ? tense : `${language}:${tense}`;
 }
 
 /** Verbos "Test" mode only — practice mode never calls this, so drilling freely doesn't move the progress ring. */
