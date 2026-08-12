@@ -6,6 +6,7 @@
 import { supabaseAdmin } from "./supabaseAdmin";
 
 export type CefrLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+export type Language = "es" | "pt";
 
 export interface VocabInsert {
   lemma: string;
@@ -14,6 +15,7 @@ export interface VocabInsert {
   example_sentence: string;
   example_translation: string;
   cefr_level: CefrLevel;
+  frequency_rank?: number;
 }
 
 export interface VerbInsert {
@@ -23,6 +25,7 @@ export interface VerbInsert {
   example_sentence: string;
   example_translation: string;
   cefr_level: CefrLevel;
+  frequency_rank?: number;
 }
 
 export interface GrammarExerciseInsert {
@@ -32,10 +35,10 @@ export interface GrammarExerciseInsert {
   cefr_level: CefrLevel;
 }
 
-export async function resolveThemeId(name: string): Promise<string> {
-  const { data: existing } = await supabaseAdmin.from("themes").select("id").eq("name", name).maybeSingle();
+export async function resolveThemeId(name: string, language: Language = "es"): Promise<string> {
+  const { data: existing } = await supabaseAdmin.from("themes").select("id").eq("name", name).eq("language", language).maybeSingle();
   if (existing) return existing.id;
-  const { data: created, error } = await supabaseAdmin.from("themes").insert({ name }).select("id").single();
+  const { data: created, error } = await supabaseAdmin.from("themes").insert({ name, language }).select("id").single();
   if (error) throw error;
   return created.id;
 }
@@ -68,9 +71,10 @@ function mergeTranslation(existing: string, addition: string): string {
 export async function insertVocab(
   items: VocabInsert[],
   theme?: string,
-  mode: InsertMode = "skip"
+  mode: InsertMode = "skip",
+  language: Language = "es"
 ): Promise<{ inserted: number; extended: number; skipped: number }> {
-  const { data: existing } = await supabaseAdmin.from("vocab_items").select("id, lemma, translation");
+  const { data: existing } = await supabaseAdmin.from("vocab_items").select("id, lemma, translation").eq("language", language);
   const existingByLemma = new Map((existing ?? []).map((r) => [r.lemma.toLowerCase(), r]));
 
   const fresh: VocabInsert[] = [];
@@ -95,12 +99,12 @@ export async function insertVocab(
 
   const { data: inserted, error } = await supabaseAdmin
     .from("vocab_items")
-    .insert(fresh.map((it) => ({ ...it, verified: true })))
+    .insert(fresh.map((it) => ({ ...it, verified: true, language })))
     .select("id");
   if (error) throw error;
 
   if (theme && inserted?.length) {
-    const themeId = await resolveThemeId(theme);
+    const themeId = await resolveThemeId(theme, language);
     await supabaseAdmin
       .from("vocab_item_themes")
       .insert(inserted.map((row) => ({ vocab_item_id: row.id, theme_id: themeId })));
@@ -113,9 +117,10 @@ export async function insertVocab(
 export async function insertVerbs(
   items: VerbInsert[],
   theme?: string,
-  mode: InsertMode = "skip"
+  mode: InsertMode = "skip",
+  language: Language = "es"
 ): Promise<{ inserted: number; extended: number; skipped: number }> {
-  const { data: existing } = await supabaseAdmin.from("verbs").select("id, infinitive, translation");
+  const { data: existing } = await supabaseAdmin.from("verbs").select("id, infinitive, translation").eq("language", language);
   const existingByInfinitive = new Map((existing ?? []).map((r) => [r.infinitive.toLowerCase(), r]));
 
   const fresh: VerbInsert[] = [];
@@ -140,12 +145,12 @@ export async function insertVerbs(
 
   const { data: inserted, error } = await supabaseAdmin
     .from("verbs")
-    .insert(fresh.map((it) => ({ ...it, verified: true })))
+    .insert(fresh.map((it) => ({ ...it, verified: true, language })))
     .select("id");
   if (error) throw error;
 
   if (theme && inserted?.length) {
-    const themeId = await resolveThemeId(theme);
+    const themeId = await resolveThemeId(theme, language);
     await supabaseAdmin.from("verb_themes").insert(inserted.map((row) => ({ verb_id: row.id, theme_id: themeId })));
   }
 

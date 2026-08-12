@@ -6,13 +6,25 @@ import {
   conjugateImperative,
   isFullySupported,
   isIrregularForm,
-  type ConjugableTense,
   type ImperativePerson,
   type ImperativePolarity,
   type Person,
   type Tense,
+  type ConjugableTense,
 } from "./conjugation";
+import {
+  PERSONS_PT,
+  PERSON_LABELS_PT,
+  conjugatePt,
+  conjugateImperativePt,
+  isFullySupportedPt,
+  isIrregularFormPt,
+  type PersonPt,
+  type TensePt,
+  type ConjugableTensePt,
+} from "./conjugationPt";
 import { logReviewEvent } from "./reviewLog";
+import type { Language } from "./language";
 import type { GrammarProgress, GrammarTopic } from "./types";
 
 function shuffle<T>(arr: T[]): T[] {
@@ -24,10 +36,11 @@ function shuffle<T>(arr: T[]): T[] {
   return copy;
 }
 
-export async function fetchGrammarTopics(): Promise<GrammarTopic[]> {
+export async function fetchGrammarTopics(language: Language = "es"): Promise<GrammarTopic[]> {
   const { data, error } = await supabase
     .from("grammar_topics")
     .select("id, slug, title, category, explanation_md, cefr_level, sort_order")
+    .eq("language", language)
     .order("sort_order", { ascending: true });
   if (error) throw error;
   return (data ?? []).map((row: any) => ({
@@ -100,13 +113,14 @@ export async function fetchTopicExercises(topicId: string, limit = 12): Promise<
   return shuffle(exercises).slice(0, limit);
 }
 
-/** Random sample across every topic's exercises, for the combined Gramática test. */
-export async function fetchCombinedTestExercises(limit = 15): Promise<TopicExercise[]> {
+/** Random sample across every topic's exercises for the given language, for the combined Gramática test. */
+export async function fetchCombinedTestExercises(language: Language = "es", limit = 15): Promise<TopicExercise[]> {
   const { data, error } = await supabase
     .from("grammar_exercises")
-    .select("id, prompt, accepted_answers, explanation")
+    .select("id, prompt, accepted_answers, explanation, grammar_topics!inner(language)")
     .not("topic_id", "is", null)
     .eq("verified", true)
+    .eq("grammar_topics.language", language)
     .limit(500);
   if (error) throw error;
   const exercises = (data ?? []).map((row: any) => ({
@@ -125,10 +139,15 @@ interface EligibleVerb {
   verb_type: string;
 }
 
-async function fetchEligibleVerbs(): Promise<EligibleVerb[]> {
-  const { data, error } = await supabase.from("verbs").select("id, infinitive, translation, verb_type").eq("verified", true);
+async function fetchEligibleVerbs(language: Language): Promise<EligibleVerb[]> {
+  const { data, error } = await supabase
+    .from("verbs")
+    .select("id, infinitive, translation, verb_type")
+    .eq("verified", true)
+    .eq("language", language);
   if (error) throw error;
-  return (data ?? []).filter((v: EligibleVerb) => isFullySupported(v.infinitive, v.verb_type));
+  const supported = language === "pt" ? isFullySupportedPt : isFullySupported;
+  return (data ?? []).filter((v: EligibleVerb) => supported(v.infinitive, v.verb_type));
 }
 
 export interface TenseQuestion {
@@ -141,6 +160,7 @@ export interface TenseQuestion {
 
 const IMPERATIVE_PERSONS: ImperativePerson[] = ["tu", "usted", "nosotros", "ustedes"];
 const IMPERATIVE_POLARITIES: ImperativePolarity[] = ["affirmative", "negative"];
+const IMPERATIVE_PERSONS_PT: Exclude<PersonPt, "eu">[] = ["voce", "nos", "voces"];
 
 export type VerbCategory = "regular" | "irregular" | "mix";
 
@@ -151,27 +171,81 @@ function matchesCategory(formIsIrregular: boolean, category: VerbCategory): bool
 
 /**
  * Builds a fresh, randomized set of conjugation-drill questions for a tense
- * — computed live from the deterministic engine, never stored.
+ * — computed live from the deterministic engine, never stored. Dispatches
+ * to the Spanish or Portuguese engine based on `language`; the two engines
+ * have different Person/Tense shapes (5 persons vs. 4, different tense
+ * names), so this function's `tense` param is intentionally just `string`
+ * at this boundary — each branch narrows it back to its own engine's type.
  *
- * Regularity is classified per (verb, person) form, not per verb: most
- * irregular verbs are only irregular in some tenses and some persons (e.g.
- * tener's imperfecto is fully regular; pensar's nosotros form doesn't stem-
- * change even in tenses where the other persons do). So "Regulars" and
- * "Irregulars" enumerate every valid form for the tense, classify each one
- * with isIrregularForm, and only then filter — a pool built by excluding
- * whole verbs would put regular forms of irregular verbs in the wrong
- * bucket.
+ * Regularity is classified per (verb, person) form, not per verb — see
+ * conjugation.ts's isIrregularForm for why.
  */
-export async function buildTenseQuestions(tense: Tense, count: number, category: VerbCategory = "mix"): Promise<TenseQuestion[]> {
-  const pool = await fetchEligibleVerbs();
+export async function buildTenseQuestions(
+  tense: string,
+  count: number,
+  category: VerbCategory = "mix",
+  language: Language = "es"
+): Promise<TenseQuestion[]> {
+  const pool = await fetchEligibleVerbs(language);
   if (!pool.length) return [];
+
+  if (language === "pt") {
+    if (tense === "imperativo") {
+      const candidates: { verb: EligibleVerb; person: Exclude<PersonPt, "eu">; polarity: ImperativePolarity }[] = [];
+      for (const verb of pool) {
+        for (const person of IMPERATIVE_PERSONS_PT) {
+          for (const polarity of IMPERATIVE_POLARITIES) {
+            const irregular = isIrregularFormPt(verb.infinitive, tense as TensePt, person, polarity);
+            if (matchesCategory(irregular, category)) candidates.push({ verb, person, polarity });
+          }
+        }
+      }
+      if (!candidates.length) return [];
+      const questions: TenseQuestion[] = [];
+      for (let i = 0; i < count; i++) {
+        const c = candidates[Math.floor(Math.random() * candidates.length)];
+        const answer = conjugateImperativePt(c.verb.infinitive, c.person, c.polarity);
+        const label = `${c.polarity === "negative" ? "não · " : ""}${PERSON_LABELS_PT[c.person]}`;
+        questions.push({
+          verbId: c.verb.id,
+          infinitive: c.verb.infinitive,
+          translation: c.verb.translation,
+          prompt: `${c.verb.infinitive} — ${label}`,
+          answer,
+        });
+      }
+      return questions;
+    }
+
+    const candidates: { verb: EligibleVerb; person: PersonPt }[] = [];
+    for (const verb of pool) {
+      for (const person of PERSONS_PT) {
+        const irregular = isIrregularFormPt(verb.infinitive, tense as TensePt, person);
+        if (matchesCategory(irregular, category)) candidates.push({ verb, person });
+      }
+    }
+    if (!candidates.length) return [];
+    const questions: TenseQuestion[] = [];
+    for (let i = 0; i < count; i++) {
+      const c = candidates[Math.floor(Math.random() * candidates.length)];
+      const answer = conjugatePt(c.verb.infinitive, tense as ConjugableTensePt, c.person);
+      questions.push({
+        verbId: c.verb.id,
+        infinitive: c.verb.infinitive,
+        translation: c.verb.translation,
+        prompt: `${c.verb.infinitive} — ${PERSON_LABELS_PT[c.person]}`,
+        answer,
+      });
+    }
+    return questions;
+  }
 
   if (tense === "imperativo") {
     const candidates: { verb: EligibleVerb; person: ImperativePerson; polarity: ImperativePolarity }[] = [];
     for (const verb of pool) {
       for (const person of IMPERATIVE_PERSONS) {
         for (const polarity of IMPERATIVE_POLARITIES) {
-          const irregular = isIrregularForm(verb.infinitive, tense, person, polarity);
+          const irregular = isIrregularForm(verb.infinitive, tense as Tense, person, polarity);
           if (matchesCategory(irregular, category)) candidates.push({ verb, person, polarity });
         }
       }
@@ -197,7 +271,7 @@ export async function buildTenseQuestions(tense: Tense, count: number, category:
   const candidates: { verb: EligibleVerb; person: Person }[] = [];
   for (const verb of pool) {
     for (const person of PERSONS) {
-      const irregular = isIrregularForm(verb.infinitive, tense, person);
+      const irregular = isIrregularForm(verb.infinitive, tense as Tense, person);
       if (matchesCategory(irregular, category)) candidates.push({ verb, person });
     }
   }
@@ -261,9 +335,18 @@ export async function recordTopicAttempt(userId: string, topicSlug: string, corr
   await logReviewEvent(userId, "topic_attempt");
 }
 
+// Spanish and Portuguese tense identifiers collide (both have "presente",
+// "imperativo"...), and grammar_progress.scope_key has no language column
+// to disambiguate. Spanish keeps its existing unprefixed keys (so prior
+// progress isn't orphaned); Portuguese gets a "pt:" prefix, since it's
+// starting from zero rows anyway.
+export function tenseScopeKey(tense: string, language: Language): string {
+  return language === "pt" ? `pt:${tense}` : tense;
+}
+
 /** Verbos "Test" mode only — practice mode never calls this, so drilling freely doesn't move the progress ring. */
-export async function recordTenseTestResult(userId: string, tense: string, correct: number, total: number) {
-  await upsertProgress(userId, "tense", tense, {
+export async function recordTenseTestResult(userId: string, tense: string, correct: number, total: number, language: Language = "es") {
+  await upsertProgress(userId, "tense", tenseScopeKey(tense, language), {
     correctDelta: correct,
     attemptDelta: total,
     bestTestScore: total > 0 ? correct / total : 0,

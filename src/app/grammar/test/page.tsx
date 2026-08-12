@@ -5,10 +5,12 @@ import type { User } from "@supabase/supabase-js";
 import AuthGate from "@/components/AuthGate";
 import ExerciseCard, { type ExerciseResult } from "@/components/ExerciseCard";
 import { fetchCombinedTestExercises, isCorrectAnswer, recordCombinedTestResult, type TopicExercise } from "@/lib/grammarQueue";
+import { useLanguage } from "@/lib/language";
 
 const TEST_LENGTH = 15;
 
 function CombinedTestSession({ user }: { user: User }) {
+  const { language } = useLanguage();
   const [exercises, setExercises] = useState<TopicExercise[]>([]);
   const [index, setIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
@@ -20,9 +22,9 @@ function CombinedTestSession({ user }: { user: User }) {
     setFinished(false);
     setIndex(0);
     setCorrectCount(0);
-    setExercises(await fetchCombinedTestExercises(TEST_LENGTH));
+    setExercises(await fetchCombinedTestExercises(language, TEST_LENGTH));
     setLoading(false);
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     start();

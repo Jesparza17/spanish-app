@@ -7,25 +7,29 @@ import { Flame } from "lucide-react";
 import AuthGate from "@/components/AuthGate";
 import ActivityHeatmap from "@/components/ActivityHeatmap";
 import { fetchDashboardStats, type DashboardStats } from "@/lib/dashboard";
+import { useLanguage, type Language } from "@/lib/language";
 import type { CefrLevel } from "@/lib/types";
 
-const LANGUAGES: { code: string; flag: string; label: string; active: boolean }[] = [
+const LANGUAGES: { code: Language; flag: string; label: string; active: boolean }[] = [
   { code: "es", flag: "🇲🇽", label: "Español", active: true },
-  { code: "fr", flag: "🇫🇷", label: "Français", active: false },
-  { code: "pt", flag: "🇧🇷", label: "Português", active: false },
+  { code: "pt", flag: "🇧🇷", label: "Português", active: true },
 ];
+
+const COMING_SOON: { flag: string; label: string }[] = [{ flag: "🇫🇷", label: "Français" }];
 
 const LEVELS: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
 function Dashboard({ user }: { user: User }) {
+  const { language, setLanguage } = useLanguage();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardStats(user.id)
+    setLoading(true);
+    fetchDashboardStats(user.id, language)
       .then(setStats)
       .finally(() => setLoading(false));
-  }, [user.id]);
+  }, [user.id, language]);
 
   return (
     <main>
@@ -39,17 +43,22 @@ function Dashboard({ user }: { user: User }) {
       <div className="max-w-md mx-auto px-6 -mt-6 space-y-5 pb-10">
         <div className="flex gap-2">
           {LANGUAGES.map((lang) => (
-            <div
+            <button
               key={lang.code}
-              className={`flex-1 rounded-2xl px-3 py-3 text-center shadow-card ${
-                lang.active ? "bg-ink text-white" : "bg-card text-ink/35 opacity-60"
+              onClick={() => setLanguage(lang.code)}
+              className={`flex-1 rounded-2xl px-3 py-3 text-center shadow-card transition-colors ${
+                language === lang.code ? "bg-ink text-white" : "bg-card text-ink/55"
               }`}
             >
               <span className="block text-xl">{lang.flag}</span>
               <span className="block font-sans text-[11px] font-medium mt-1">{lang.label}</span>
-              {!lang.active && (
-                <span className="block font-sans text-[9px] text-ink/35 mt-0.5 uppercase tracking-wide">Próximamente</span>
-              )}
+            </button>
+          ))}
+          {COMING_SOON.map((lang) => (
+            <div key={lang.label} className="flex-1 rounded-2xl px-3 py-3 text-center shadow-card bg-card text-ink/35 opacity-60">
+              <span className="block text-xl">{lang.flag}</span>
+              <span className="block font-sans text-[11px] font-medium mt-1">{lang.label}</span>
+              <span className="block font-sans text-[9px] text-ink/35 mt-0.5 uppercase tracking-wide">Próximamente</span>
             </div>
           ))}
         </div>

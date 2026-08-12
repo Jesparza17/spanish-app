@@ -14,6 +14,7 @@ export interface GrammarTopicSeed {
   cefrLevel: CefrLevel;
   sortOrder: number;
   explanationMd: string;
+  language?: "es" | "pt"; // defaults to "es" — every topic in this file predates multi-language support
 }
 
 export const GRAMMAR_TOPICS: GrammarTopicSeed[] = [

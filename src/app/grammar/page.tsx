@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import AuthGate from "@/components/AuthGate";
-import { fetchGrammarProgress, fetchGrammarTopics } from "@/lib/grammarQueue";
+import { fetchGrammarProgress, fetchGrammarTopics, tenseScopeKey } from "@/lib/grammarQueue";
 import { CORE_TENSES, TENSE_CEFR_LEVELS, TENSE_LABELS } from "@/lib/conjugation";
+import { CORE_TENSES_PT, TENSE_CEFR_LEVELS_PT, TENSE_LABELS_PT } from "@/lib/conjugationPt";
+import { useLanguage } from "@/lib/language";
 import type { GrammarProgress, GrammarTopic } from "@/lib/types";
 
 function progressPct(progress: GrammarProgress[], scopeType: "topic" | "tense", scopeKey: string): number | null {
@@ -18,19 +20,25 @@ function progressPct(progress: GrammarProgress[], scopeType: "topic" | "tense", 
 
 function GrammarHome({ user }: { user: User }) {
   const searchParams = useSearchParams();
+  const { language } = useLanguage();
   const [tab, setTab] = useState<"gramatica" | "verbos">(searchParams.get("tab") === "verbos" ? "verbos" : "gramatica");
   const [topics, setTopics] = useState<GrammarTopic[]>([]);
   const [progress, setProgress] = useState<GrammarProgress[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const tenses = language === "pt" ? CORE_TENSES_PT : CORE_TENSES;
+  const tenseLabels: Record<string, string> = language === "pt" ? TENSE_LABELS_PT : TENSE_LABELS;
+  const tenseCefr: Record<string, string> = language === "pt" ? TENSE_CEFR_LEVELS_PT : TENSE_CEFR_LEVELS;
+
   useEffect(() => {
-    Promise.all([fetchGrammarTopics(), fetchGrammarProgress(user.id)])
+    setLoading(true);
+    Promise.all([fetchGrammarTopics(language), fetchGrammarProgress(user.id)])
       .then(([t, p]) => {
         setTopics(t);
         setProgress(p);
       })
       .finally(() => setLoading(false));
-  }, [user.id]);
+  }, [user.id, language]);
 
   return (
     <main>
@@ -103,8 +111,8 @@ function GrammarHome({ user }: { user: User }) {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {CORE_TENSES.map((tense) => {
-              const pct = progressPct(progress, "tense", tense);
+            {tenses.map((tense) => {
+              const pct = progressPct(progress, "tense", tenseScopeKey(tense, language));
               return (
                 <Link
                   key={tense}
@@ -112,9 +120,9 @@ function GrammarHome({ user }: { user: User }) {
                   className="flex items-center justify-between rounded-2xl bg-card shadow-card px-5 py-4 active:scale-[0.98] transition-transform"
                 >
                   <span>
-                    <span className="block font-display text-base text-ink">{TENSE_LABELS[tense]}</span>
+                    <span className="block font-display text-base text-ink">{tenseLabels[tense]}</span>
                     <span className="block font-sans text-xs text-ink/45 mt-0.5 uppercase tracking-wide">
-                      {TENSE_CEFR_LEVELS[tense]}
+                      {tenseCefr[tense]}
                     </span>
                   </span>
                   <span className="font-sans text-xs font-medium text-agave-dark bg-agave-light rounded-full px-2.5 py-1 shrink-0">

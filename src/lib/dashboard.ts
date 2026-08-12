@@ -1,6 +1,8 @@
 import { supabase } from "./supabaseClient";
 import { fetchGrammarProgress, fetchGrammarTopics } from "./grammarQueue";
 import { CORE_TENSES } from "./conjugation";
+import { CORE_TENSES_PT } from "./conjugationPt";
+import type { Language } from "./language";
 import type { CefrLevel, GrammarProgress, GrammarTopic } from "./types";
 
 export interface VocabVerbStats {
@@ -74,47 +76,60 @@ const COVERAGE_THRESHOLD = 0.65;
 
 const ACTIVITY_WINDOW_DAYS = 84; // 12 weeks, GitHub-heatmap-style
 
-async function fetchVocabVerbStats(userId: string): Promise<VocabVerbStats> {
+async function fetchVocabVerbStats(userId: string, language: Language): Promise<VocabVerbStats> {
   const nowIso = new Date().toISOString();
+  const knownFilter = `repetitions.gte.${KNOWN_MIN_REPETITIONS},interval_days.gte.${KNOWN_MIN_INTERVAL_DAYS}`;
 
-  const [{ count: totalCount }, { count: dueCount }, { count: seenCount }, { data: knownRows }] = await Promise.all([
-    supabase.from("srs_state").select("*", { count: "exact", head: true }).eq("user_id", userId),
-    supabase.from("srs_state").select("*", { count: "exact", head: true }).eq("user_id", userId).lte("due_at", nowIso),
-    supabase.from("srs_state").select("*", { count: "exact", head: true }).eq("user_id", userId).gte("repetitions", 1),
-    supabase
-      .from("srs_state")
-      .select("repetitions, interval_days, vocab_items(cefr_level), verbs(cefr_level)")
-      .eq("user_id", userId)
-      .or(`repetitions.gte.${KNOWN_MIN_REPETITIONS},interval_days.gte.${KNOWN_MIN_INTERVAL_DAYS}`),
+  const [
+    { count: totalVocab },
+    { count: dueVocab },
+    { count: seenVocab },
+    { data: knownVocabRows },
+    { count: totalVerb },
+    { count: dueVerb },
+    { count: seenVerb },
+    { data: knownVerbRows },
+  ] = await Promise.all([
+    supabase.from("srs_state").select("vocab_items!inner(language)", { count: "exact", head: true }).eq("user_id", userId).eq("vocab_items.language", language),
+    supabase.from("srs_state").select("vocab_items!inner(language)", { count: "exact", head: true }).eq("user_id", userId).eq("vocab_items.language", language).lte("due_at", nowIso),
+    supabase.from("srs_state").select("vocab_items!inner(language)", { count: "exact", head: true }).eq("user_id", userId).eq("vocab_items.language", language).gte("repetitions", 1),
+    supabase.from("srs_state").select("repetitions, interval_days, vocab_items!inner(cefr_level, language)").eq("user_id", userId).eq("vocab_items.language", language).or(knownFilter),
+    supabase.from("srs_state").select("verbs!inner(language)", { count: "exact", head: true }).eq("user_id", userId).eq("verbs.language", language),
+    supabase.from("srs_state").select("verbs!inner(language)", { count: "exact", head: true }).eq("user_id", userId).eq("verbs.language", language).lte("due_at", nowIso),
+    supabase.from("srs_state").select("verbs!inner(language)", { count: "exact", head: true }).eq("user_id", userId).eq("verbs.language", language).gte("repetitions", 1),
+    supabase.from("srs_state").select("repetitions, interval_days, verbs!inner(cefr_level, language)").eq("user_id", userId).eq("verbs.language", language).or(knownFilter),
   ]);
 
   const knownByLevel: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
   const knownVocabByLevel: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
   const knownVerbByLevel: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
-  for (const row of knownRows ?? []) {
-    const vocabLevel: CefrLevel | undefined = (row as any).vocab_items?.cefr_level;
-    const verbLevel: CefrLevel | undefined = (row as any).verbs?.cefr_level;
-    const level = vocabLevel ?? verbLevel;
+  for (const row of knownVocabRows ?? []) {
+    const level: CefrLevel | undefined = (row as any).vocab_items?.cefr_level;
     if (!level) continue;
     knownByLevel[level]++;
-    if (vocabLevel) knownVocabByLevel[level]++;
-    else knownVerbByLevel[level]++;
+    knownVocabByLevel[level]++;
+  }
+  for (const row of knownVerbRows ?? []) {
+    const level: CefrLevel | undefined = (row as any).verbs?.cefr_level;
+    if (!level) continue;
+    knownByLevel[level]++;
+    knownVerbByLevel[level]++;
   }
 
   return {
-    dueCount: dueCount ?? 0,
-    totalCount: totalCount ?? 0,
-    seenCount: seenCount ?? 0,
+    dueCount: (dueVocab ?? 0) + (dueVerb ?? 0),
+    totalCount: (totalVocab ?? 0) + (totalVerb ?? 0),
+    seenCount: (seenVocab ?? 0) + (seenVerb ?? 0),
     knownByLevel,
     knownVocabByLevel,
     knownVerbByLevel,
   };
 }
 
-async function fetchLevelTotals(): Promise<Record<CefrLevel, number>> {
+async function fetchLevelTotals(language: Language): Promise<Record<CefrLevel, number>> {
   const [{ data: vocabLevels }, { data: verbLevels }] = await Promise.all([
-    supabase.from("vocab_items").select("cefr_level"),
-    supabase.from("verbs").select("cefr_level"),
+    supabase.from("vocab_items").select("cefr_level").eq("language", language),
+    supabase.from("verbs").select("cefr_level").eq("language", language),
   ]);
 
   const totals: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
@@ -160,13 +175,13 @@ function computeGrammarStats(topics: GrammarTopic[], progress: GrammarProgress[]
   };
 }
 
-function computeVerbosStats(progress: GrammarProgress[]): VerbosStats {
+function computeVerbosStats(progress: GrammarProgress[], language: Language): VerbosStats {
   const tenseProgress = progress.filter((p) => p.scopeType === "tense" && p.bestTestScore !== null);
   const avg = tenseProgress.length
     ? tenseProgress.reduce((sum, p) => sum + (p.bestTestScore ?? 0), 0) / tenseProgress.length
     : null;
   return {
-    tensesTotal: CORE_TENSES.length,
+    tensesTotal: language === "pt" ? CORE_TENSES_PT.length : CORE_TENSES.length,
     tensesTested: tenseProgress.length,
     averageBestScorePct: avg !== null ? Math.round(avg * 100) : null,
   };
@@ -233,18 +248,18 @@ async function fetchActivityStats(userId: string): Promise<ActivityStats> {
   return { currentStreakDays, longestStreakDays, activityByDate, totalReviews: totalReviews ?? 0, reviewsThisWeek };
 }
 
-export async function fetchDashboardStats(userId: string): Promise<DashboardStats> {
+export async function fetchDashboardStats(userId: string, language: Language = "es"): Promise<DashboardStats> {
   const [vocabVerbs, levelTotals, topics, progress, activity] = await Promise.all([
-    fetchVocabVerbStats(userId),
-    fetchLevelTotals(),
-    fetchGrammarTopics(),
+    fetchVocabVerbStats(userId, language),
+    fetchLevelTotals(language),
+    fetchGrammarTopics(language),
     fetchGrammarProgress(userId),
     fetchActivityStats(userId),
   ]);
   return {
     vocabVerbs,
     grammar: computeGrammarStats(topics, progress),
-    verbos: computeVerbosStats(progress),
+    verbos: computeVerbosStats(progress, language),
     cefr: computeCefrStats(levelTotals, vocabVerbs.knownByLevel),
     activity,
   };

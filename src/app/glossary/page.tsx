@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import AuthGate from "@/components/AuthGate";
 import SpeakButton from "@/components/SpeakButton";
 import { fetchAllVocab, fetchAllVerbs } from "@/lib/glossary";
+import { useLanguage } from "@/lib/language";
 import type { VocabItem, Verb } from "@/lib/types";
 
 const KINDS: { value: "vocab" | "verbs"; label: string }[] = [
@@ -12,6 +13,7 @@ const KINDS: { value: "vocab" | "verbs"; label: string }[] = [
 ];
 
 function GlossaryHome() {
+  const { language } = useLanguage();
   const [kind, setKind] = useState<"vocab" | "verbs">("vocab");
   const [vocab, setVocab] = useState<VocabItem[]>([]);
   const [verbs, setVerbs] = useState<Verb[]>([]);
@@ -19,13 +21,14 @@ function GlossaryHome() {
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    Promise.all([fetchAllVocab(), fetchAllVerbs()])
+    setLoading(true);
+    Promise.all([fetchAllVocab(language), fetchAllVerbs(language)])
       .then(([v, vb]) => {
         setVocab(v);
         setVerbs(vb);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [language]);
 
   const filteredVocab = useMemo(() => {
     const q = query.trim().toLowerCase();

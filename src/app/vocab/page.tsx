@@ -8,6 +8,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { supabase } from "@/lib/supabaseClient";
 import { fetchDueQueue, submitGrade } from "@/lib/reviewQueue";
 import { masterItem, nextReview } from "@/lib/srs";
+import { useLanguage } from "@/lib/language";
 import type { ReviewCard as ReviewCardData, Theme, SrsRow } from "@/lib/types";
 
 const ITEM_KINDS: { value: "both" | "vocab" | "verb"; label: string }[] = [
@@ -17,6 +18,7 @@ const ITEM_KINDS: { value: "both" | "vocab" | "verb"; label: string }[] = [
 ];
 
 function ReviewSession({ user }: { user: User }) {
+  const { language } = useLanguage();
   const [themes, setThemes] = useState<Theme[]>([]);
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   const [itemKind, setItemKind] = useState<"both" | "vocab" | "verb">("both");
@@ -24,19 +26,21 @@ function ReviewSession({ user }: { user: User }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setSelectedThemeId(null); // theme IDs don't carry across languages
     supabase
       .from("themes")
       .select("id, name, description")
+      .eq("language", language)
       .then(({ data }) => setThemes(data ?? []));
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     setLoading(true);
     const mode = selectedThemeId ? ({ type: "theme", themeId: selectedThemeId } as const) : ({ type: "frequency" } as const);
-    fetchDueQueue(user.id, itemKind, mode)
+    fetchDueQueue(user.id, itemKind, mode, language)
       .then(setQueue)
       .finally(() => setLoading(false));
-  }, [user.id, selectedThemeId, itemKind]);
+  }, [user.id, selectedThemeId, itemKind, language]);
 
   async function fetchSrsState(srsId: string) {
     const { data: row } = await supabase

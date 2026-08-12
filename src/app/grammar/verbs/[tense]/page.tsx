@@ -12,7 +12,9 @@ import {
   type TenseQuestion,
   type VerbCategory,
 } from "@/lib/grammarQueue";
-import { CORE_TENSES, TENSE_LABELS, type Tense } from "@/lib/conjugation";
+import { CORE_TENSES, TENSE_LABELS } from "@/lib/conjugation";
+import { CORE_TENSES_PT, TENSE_LABELS_PT } from "@/lib/conjugationPt";
+import { useLanguage } from "@/lib/language";
 
 const TEST_LENGTH = 12;
 
@@ -22,7 +24,8 @@ const CATEGORIES: { value: VerbCategory; label: string }[] = [
   { value: "mix", label: "Mix" },
 ];
 
-function TenseSession({ user, tense }: { user: User; tense: Tense }) {
+function TenseSession({ user, tense, label }: { user: User; tense: string; label: string }) {
+  const { language } = useLanguage();
   const [mode, setMode] = useState<"practice" | "test">("practice");
   const [category, setCategory] = useState<VerbCategory>("mix");
   const [questions, setQuestions] = useState<TenseQuestion[]>([]);
@@ -39,10 +42,10 @@ function TenseSession({ user, tense }: { user: User; tense: Tense }) {
       setFinished(false);
       setIndex(0);
       setCorrectCount(0);
-      setQuestions(await buildTenseQuestions(tense, 1, cat));
+      setQuestions(await buildTenseQuestions(tense, 1, cat, language));
       setLoading(false);
     },
-    [tense, category]
+    [tense, category, language]
   );
 
   const startTest = useCallback(async () => {
@@ -51,18 +54,18 @@ function TenseSession({ user, tense }: { user: User; tense: Tense }) {
     setFinished(false);
     setIndex(0);
     setCorrectCount(0);
-    setQuestions(await buildTenseQuestions(tense, TEST_LENGTH));
+    setQuestions(await buildTenseQuestions(tense, TEST_LENGTH, "mix", language));
     setLoading(false);
-  }, [tense]);
+  }, [tense, language]);
 
   useEffect(() => {
     startPractice();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tense]);
+  }, [tense, language]);
 
   async function handleNextPractice() {
     setLoading(true);
-    setQuestions(await buildTenseQuestions(tense, 1, category));
+    setQuestions(await buildTenseQuestions(tense, 1, category, language));
     setIndex(0);
     setLoading(false);
   }
@@ -71,7 +74,7 @@ function TenseSession({ user, tense }: { user: User; tense: Tense }) {
     const newCorrect = correctCount + (wasCorrect ? 1 : 0);
     setCorrectCount(newCorrect);
     if (index + 1 >= questions.length) {
-      await recordTenseTestResult(user.id, tense, newCorrect, questions.length);
+      await recordTenseTestResult(user.id, tense, newCorrect, questions.length, language);
       setFinished(true);
     } else {
       setIndex((i) => i + 1);
@@ -90,7 +93,7 @@ function TenseSession({ user, tense }: { user: User; tense: Tense }) {
       <header className="bg-ink-shell safe-top">
         <div className="max-w-md mx-auto px-6 pt-8 pb-10">
           <p className="font-sans text-xs tracking-[0.2em] text-marigold uppercase mb-2">Verbos</p>
-          <h1 className="font-display text-3xl text-white">{TENSE_LABELS[tense]}</h1>
+          <h1 className="font-display text-3xl text-white">{label}</h1>
         </div>
       </header>
 
@@ -176,12 +179,15 @@ function TenseSession({ user, tense }: { user: User; tense: Tense }) {
 
 export default function TensePage() {
   const params = useParams<{ tense: string }>();
-  const tense = params.tense as Tense;
-  const valid = (CORE_TENSES as string[]).includes(tense);
+  const tense = params.tense;
+  const { language } = useLanguage();
+  const tenses = language === "pt" ? CORE_TENSES_PT : CORE_TENSES;
+  const labels: Record<string, string> = language === "pt" ? TENSE_LABELS_PT : TENSE_LABELS;
+  const valid = (tenses as string[]).includes(tense);
 
   if (!valid) {
     return <p className="font-sans text-sm text-ink/50 px-6 pt-10">Unknown tense.</p>;
   }
 
-  return <AuthGate>{(user) => <TenseSession user={user} tense={tense} />}</AuthGate>;
+  return <AuthGate>{(user) => <TenseSession user={user} tense={tense} label={labels[tense]} />}</AuthGate>;
 }

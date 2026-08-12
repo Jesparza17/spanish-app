@@ -6,8 +6,8 @@
 // script. Only needs SUPABASE_SERVICE_ROLE_KEY.
 //
 // Usage:
-//   npm run insert:content -- vocab path/to/items.json [--theme "el mercado"] [--extend]
-//   npm run insert:content -- verbs path/to/items.json [--theme "la rutina diaria"] [--extend]
+//   npm run insert:content -- vocab path/to/items.json [--theme "el mercado"] [--extend] [--language pt]
+//   npm run insert:content -- verbs path/to/items.json [--theme "la rutina diaria"] [--extend] [--language pt]
 //   npm run insert:content -- grammar path/to/items.json --topic ser_estar
 //
 // --extend: for an item whose lemma/infinitive already exists, merge the new
@@ -15,9 +15,13 @@
 // Use only for a small curated "additional sense" file — the default (no
 // --extend) stays skip-on-duplicate, which is what the ordinary bulk-content
 // grind wants (a duplicate there really is an accidental re-add).
+//
+// --language: defaults to "es" (unchanged behavior for every prior
+// invocation). Grammar exercises don't take --language — they inherit it
+// from the topic (--topic) they're attached to.
 
 import { readFileSync } from "fs";
-import { insertGrammarExercises, insertVerbs, insertVocab } from "./lib/insert";
+import { insertGrammarExercises, insertVerbs, insertVocab, type Language } from "./lib/insert";
 
 const BOOLEAN_FLAGS = new Set(["extend"]);
 
@@ -49,10 +53,11 @@ async function main() {
   }
   const items = JSON.parse(readFileSync(file, "utf-8"));
   const mode = opts.extend === "true" ? "extend" : "skip";
+  const language = (opts.language as Language) || "es";
 
   switch (type) {
     case "vocab": {
-      const result = await insertVocab(items, opts.theme, mode);
+      const result = await insertVocab(items, opts.theme, mode, language);
       console.log(
         mode === "extend"
           ? `vocab: ${result.inserted} inserted, ${result.extended} extended, ${result.skipped} unchanged.`
@@ -61,7 +66,7 @@ async function main() {
       break;
     }
     case "verbs": {
-      const result = await insertVerbs(items, opts.theme, mode);
+      const result = await insertVerbs(items, opts.theme, mode, language);
       console.log(
         mode === "extend"
           ? `verbs: ${result.inserted} inserted, ${result.extended} extended, ${result.skipped} unchanged.`
