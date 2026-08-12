@@ -46,3 +46,20 @@ export function nextReview(state: SrsState, grade: number, now: Date = new Date(
 export function isDue(dueAt: string | Date, now: Date = new Date()): boolean {
   return new Date(dueAt).getTime() <= now.getTime();
 }
+
+// "I already know this" — for words well below your level that the normal
+// grade progression would still resurface every few months. Skips the SM-2
+// formula entirely and jumps straight to a multi-year interval, rather than
+// requiring a string of "Easy" grades to earn a long gap.
+const MASTERED_INTERVAL_DAYS = 3650;
+
+export function masterItem(state: SrsState, now: Date = new Date()): SrsResult {
+  const dueAt = new Date(now);
+  dueAt.setDate(dueAt.getDate() + MASTERED_INTERVAL_DAYS);
+  return {
+    easeFactor: Math.max(state.easeFactor, 2.5),
+    intervalDays: MASTERED_INTERVAL_DAYS,
+    repetitions: state.repetitions + 1,
+    dueAt,
+  };
+}

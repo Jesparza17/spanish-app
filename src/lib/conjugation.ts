@@ -8,6 +8,7 @@
 // "you" in both familiar and formal register.
 
 import { IRREGULAR_VERBS, type IrregularConjugation } from "./irregularVerbs";
+import type { CefrLevel } from "./types";
 
 export type Person = "yo" | "tu" | "usted" | "nosotros" | "ustedes";
 
@@ -28,7 +29,9 @@ export type ConjugableTense =
   | "futuro"
   | "condicional"
   | "presente_perfecto"
-  | "presente_subjuntivo";
+  | "presente_subjuntivo"
+  | "imperfecto_subjuntivo"
+  | "pluscuamperfecto_subjuntivo";
 
 export type Tense = ConjugableTense | "imperativo";
 
@@ -41,6 +44,8 @@ export const CORE_TENSES: Tense[] = [
   "presente_perfecto",
   "presente_subjuntivo",
   "imperativo",
+  "imperfecto_subjuntivo",
+  "pluscuamperfecto_subjuntivo",
 ];
 
 export const TENSE_LABELS: Record<Tense, string> = {
@@ -52,6 +57,22 @@ export const TENSE_LABELS: Record<Tense, string> = {
   presente_perfecto: "Presente perfecto",
   presente_subjuntivo: "Presente de subjuntivo",
   imperativo: "Imperativo",
+  imperfecto_subjuntivo: "Imperfecto de subjuntivo",
+  pluscuamperfecto_subjuntivo: "Pluscuamperfecto de subjuntivo",
+};
+
+/** Rough CEFR level at which each tense is typically introduced. */
+export const TENSE_CEFR_LEVELS: Record<Tense, CefrLevel> = {
+  presente: "A1",
+  preterito: "A2",
+  imperfecto: "A2",
+  futuro: "B1",
+  condicional: "B1",
+  presente_perfecto: "B1",
+  presente_subjuntivo: "B1",
+  imperativo: "B1",
+  imperfecto_subjuntivo: "B2",
+  pluscuamperfecto_subjuntivo: "C1",
 };
 
 export type VerbEnding = "ar" | "er" | "ir";
@@ -117,6 +138,19 @@ function regularPreterito(infinitive: string): Record<Person, string> {
       ustedes: stem + "aron",
     };
   }
+  // When the stem ends in a vowel, unstressed "i" between two vowels
+  // becomes "y" (leyó, not leió — cayó, construyó, huyó...). Also, when
+  // that vowel is a "strong" one (a/e/o), the surviving "i" forms need a
+  // written accent to mark the hiatus (leíste, leímos) — but not when it's
+  // a "weak" one (i/u), where the vowels form a diphthong instead and no
+  // accent is needed (construiste, construimos, not construíste).
+  const lastChar = stem.slice(-1);
+  if ("aeo".includes(lastChar)) {
+    return { yo: stem + "í", tu: stem + "íste", usted: stem + "yó", nosotros: stem + "ímos", ustedes: stem + "yeron" };
+  }
+  if ("iu".includes(lastChar)) {
+    return { yo: stem + "í", tu: stem + "iste", usted: stem + "yó", nosotros: stem + "imos", ustedes: stem + "yeron" };
+  }
   return {
     yo: stem + "í",
     tu: stem + "iste",
@@ -158,14 +192,42 @@ function regularPresenteSubjuntivo(infinitive: string): Record<Person, string> {
   return { yo: stem + "a", tu: stem + "as", usted: stem + "a", nosotros: stem + "amos", ustedes: stem + "an" };
 }
 
-export function pastParticiple(infinitive: string): string {
-  const irregular = override(infinitive)?.pastParticiple;
-  if (irregular) return irregular;
+/**
+ * Imperfecto de subjuntivo (hablara, tuviera...) has no irregularity of its
+ * own — it's always "pretérito ustedes form minus -ron" plus -ra endings,
+ * with a written accent on the stem's last vowel for nosotros. That holds
+ * for every verb, so this same derivation feeds both the real (override-
+ * aware) computation and the "what would the regular form be" comparison
+ * used for classification — only the pretérito form fed in differs.
+ */
+function deriveImperfectoSubjuntivo(preteritoUstedes: string): Record<Person, string> {
+  const stem = preteritoUstedes.replace(/ron$/, "");
+  const lastChar = stem.slice(-1);
+  const accented = lastChar === "a" ? "á" : lastChar === "e" ? "é" : lastChar;
+  const accentedStem = stem.slice(0, -1) + accented;
+  return {
+    yo: stem + "ra",
+    tu: stem + "ras",
+    usted: stem + "ra",
+    nosotros: accentedStem + "ramos",
+    ustedes: stem + "ran",
+  };
+}
+
+function regularImperfectoSubjuntivo(infinitive: string): Record<Person, string> {
+  return deriveImperfectoSubjuntivo(regularPreterito(infinitive).ustedes);
+}
+
+function regularParticiple(infinitive: string): string {
   const ending = verbEnding(infinitive);
   const stem = stemOf(infinitive);
   if (ending === "ar") return stem + "ado";
   const lastStemChar = stem.slice(-1);
   return stem + (isVowel(lastStemChar) ? "ído" : "ido");
+}
+
+export function pastParticiple(infinitive: string): string {
+  return override(infinitive)?.pastParticiple ?? regularParticiple(infinitive);
 }
 
 const HABER_PRESENTE: Record<Person, string> = {
@@ -193,6 +255,22 @@ export function conjugateAll(infinitive: string, tense: ConjugableTense): Record
       usted: `${HABER_PRESENTE.usted} ${participle}`,
       nosotros: `${HABER_PRESENTE.nosotros} ${participle}`,
       ustedes: `${HABER_PRESENTE.ustedes} ${participle}`,
+    };
+  }
+
+  if (tense === "imperfecto_subjuntivo") {
+    return deriveImperfectoSubjuntivo(conjugateAll(infinitive, "preterito").ustedes);
+  }
+
+  if (tense === "pluscuamperfecto_subjuntivo") {
+    const haberForms = deriveImperfectoSubjuntivo(conjugateAll("haber", "preterito").ustedes);
+    const participle = pastParticiple(infinitive);
+    return {
+      yo: `${haberForms.yo} ${participle}`,
+      tu: `${haberForms.tu} ${participle}`,
+      usted: `${haberForms.usted} ${participle}`,
+      nosotros: `${haberForms.nosotros} ${participle}`,
+      ustedes: `${haberForms.ustedes} ${participle}`,
     };
   }
 
@@ -259,4 +337,65 @@ export function isFullySupported(infinitive: string, verbType: string): boolean 
 
 export function isIrregular(infinitive: string): boolean {
   return infinitive in IRREGULAR_VERBS;
+}
+
+/**
+ * Whether this specific (verb, tense, person) form deviates from the
+ * regular rule — not "is this verb irregular somewhere," but "is this exact
+ * form irregular." Most irregular verbs are only irregular in some tenses
+ * (e.g. tener's imperfecto — tenía, tenías... — is fully regular) and stem
+ * changes affect some persons and not others (pensar's nosotros form never
+ * changes), so classification has to compare the actual computed form
+ * against the regular rule's output — checking whether an override *entry*
+ * exists isn't enough, since some curated entries are written out even
+ * where they happen to equal the regular form.
+ */
+export function isIrregularForm(
+  infinitive: string,
+  tense: Tense,
+  person: Person | ImperativePerson,
+  polarity: ImperativePolarity = "affirmative"
+): boolean {
+  if (tense === "futuro" || tense === "condicional") {
+    // The stem change (when present) applies identically to every person.
+    return !!override(infinitive)?.futureStem;
+  }
+  if (tense === "presente_perfecto" || tense === "pluscuamperfecto_subjuntivo") {
+    // The auxiliary (haber) is always regular in both tenses; only the
+    // participle can be irregular, and it's the same for every person.
+    return pastParticiple(infinitive) !== regularParticiple(infinitive);
+  }
+  if (tense === "imperfecto_subjuntivo") {
+    const p = person as Person;
+    return conjugate(infinitive, tense, p) !== regularImperfectoSubjuntivo(infinitive)[p];
+  }
+  if (tense === "imperativo") {
+    const actual = conjugateImperative(infinitive, person as ImperativePerson, polarity);
+    let regular: string;
+    if (polarity === "negative") {
+      regular = "no " + regularPresenteSubjuntivo(infinitive)[person as Person];
+    } else if (person === "tu") {
+      regular = regularPresente(infinitive).usted;
+    } else if (person === "nosotros") {
+      regular = regularPresenteSubjuntivo(infinitive).nosotros;
+    } else {
+      regular = regularPresenteSubjuntivo(infinitive)[person as Person];
+    }
+    return actual !== regular;
+  }
+
+  const p = person as Person;
+  const actual = conjugate(infinitive, tense as ConjugableTense, p);
+  switch (tense as ConjugableTense) {
+    case "presente":
+      return actual !== regularPresente(infinitive)[p];
+    case "preterito":
+      return actual !== regularPreterito(infinitive)[p];
+    case "imperfecto":
+      return actual !== regularImperfecto(infinitive)[p];
+    case "presente_subjuntivo":
+      return actual !== regularPresenteSubjuntivo(infinitive)[p];
+    default:
+      return false;
+  }
 }

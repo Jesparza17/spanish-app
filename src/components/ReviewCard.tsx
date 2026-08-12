@@ -13,9 +13,11 @@ const GRADES = [
 export default function ReviewCard({
   card,
   onGrade,
+  onMastered,
 }: {
   card: ReviewCardData;
   onGrade: (grade: number) => void;
+  onMastered: () => void;
 }) {
   const [revealed, setRevealed] = useState(false);
 
@@ -51,6 +53,16 @@ export default function ReviewCard({
               </button>
             ))}
           </div>
+
+          <button
+            onClick={() => {
+              onMastered();
+              setRevealed(false);
+            }}
+            className="w-full pt-1 font-sans text-xs text-ink/40 underline decoration-dotted underline-offset-4 active:text-ink/60 transition-colors"
+          >
+            I know this 100% — show it rarely
+          </button>
         </div>
       ) : (
         <button

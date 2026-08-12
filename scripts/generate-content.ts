@@ -1,4 +1,8 @@
-// The content pipeline: generate -> verify -> insert, unattended.
+// OPTIONAL, API-billed pipeline: generate -> verify -> insert, unattended,
+// calling the Anthropic API directly with your own ANTHROPIC_API_KEY. This
+// is billed separately from any Claude subscription — if you'd rather not
+// spend on that, use scripts/insert-content.ts instead, which takes content
+// generated in a Claude Code conversation and just inserts it, no API key.
 //
 // Usage:
 //   npm run generate:vocab -- --count 20 [--theme "el mercado"]
@@ -12,7 +16,8 @@
 // only output is a pass/fail count — never the content itself.
 
 import type Anthropic from "@anthropic-ai/sdk";
-import { anthropic, extractStructured, passesUnanimousVerification, researchAndDraft } from "./lib/anthropic";
+import { extractStructured, passesUnanimousVerification, researchAndDraft } from "./lib/anthropic";
+import { insertGrammarExercises, insertVerbs, insertVocab } from "./lib/insert";
 import { supabaseAdmin } from "./lib/supabaseAdmin";
 
 type CefrLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
@@ -64,26 +69,6 @@ function parseArgs(argv: string[]) {
     }
   }
   return { type, opts };
-}
-
-async function resolveThemeId(name: string): Promise<string> {
-  const { data: existing } = await supabaseAdmin.from("themes").select("id").eq("name", name).maybeSingle();
-  if (existing) return existing.id;
-  const { data: created, error } = await supabaseAdmin.from("themes").insert({ name }).select("id").single();
-  if (error) throw error;
-  return created.id;
-}
-
-async function enrollAllUsers(table: "vocab_item_id" | "verb_id", ids: string[]) {
-  if (!ids.length) return;
-  const { data: userPage, error } = await supabaseAdmin.auth.admin.listUsers();
-  if (error) throw error;
-  const rows = userPage.users.flatMap((u) => ids.map((id) => ({ user_id: u.id, [table]: id })));
-  if (!rows.length) return;
-  const { error: upsertError } = await supabaseAdmin
-    .from("srs_state")
-    .upsert(rows, { onConflict: `user_id,${table}`, ignoreDuplicates: true });
-  if (upsertError) throw upsertError;
 }
 
 async function runVocab(count: number, theme?: string) {
@@ -148,24 +133,10 @@ List all ${count} items clearly, one per numbered entry, with each field labeled
     if (pass) passing.push(item);
   }
 
-  if (passing.length) {
-    const { data: inserted, error } = await supabaseAdmin
-      .from("vocab_items")
-      .insert(passing.map((it) => ({ ...it, verified: true })))
-      .select("id");
-    if (error) throw error;
-
-    if (theme && inserted?.length) {
-      const themeId = await resolveThemeId(theme);
-      await supabaseAdmin
-        .from("vocab_item_themes")
-        .insert(inserted.map((row) => ({ vocab_item_id: row.id, theme_id: themeId })));
-    }
-
-    await enrollAllUsers("vocab_item_id", (inserted ?? []).map((r) => r.id));
-  }
-
-  console.log(`vocab: ${passing.length}/${items.length} passed verification, ${items.length - passing.length} discarded.`);
+  const { inserted, skipped } = await insertVocab(passing, theme);
+  console.log(
+    `vocab: ${passing.length}/${items.length} passed verification, ${items.length - passing.length} discarded, ${inserted} inserted (${skipped} skipped as duplicates).`
+  );
 }
 
 async function runVerbs(count: number, theme?: string) {
@@ -233,24 +204,10 @@ List all ${count} items clearly, one per numbered entry, with each field labeled
     if (pass) passing.push(item);
   }
 
-  if (passing.length) {
-    const { data: inserted, error } = await supabaseAdmin
-      .from("verbs")
-      .insert(passing.map((it) => ({ ...it, verified: true })))
-      .select("id");
-    if (error) throw error;
-
-    if (theme && inserted?.length) {
-      const themeId = await resolveThemeId(theme);
-      await supabaseAdmin
-        .from("verb_themes")
-        .insert(inserted.map((row) => ({ verb_id: row.id, theme_id: themeId })));
-    }
-
-    await enrollAllUsers("verb_id", (inserted ?? []).map((r) => r.id));
-  }
-
-  console.log(`verbs: ${passing.length}/${items.length} passed verification, ${items.length - passing.length} discarded.`);
+  const { inserted, skipped } = await insertVerbs(passing, theme);
+  console.log(
+    `verbs: ${passing.length}/${items.length} passed verification, ${items.length - passing.length} discarded, ${inserted} inserted (${skipped} skipped as duplicates).`
+  );
 }
 
 async function runGrammar(count: number, topicSlug: string) {
@@ -327,22 +284,9 @@ List all ${count} exercises clearly, one per numbered entry, with each field lab
     if (pass) passing.push(item);
   }
 
-  if (passing.length) {
-    const { error } = await supabaseAdmin.from("grammar_exercises").insert(
-      passing.map((it) => ({
-        topic_id: topic.id,
-        prompt: it.prompt,
-        accepted_answers: it.accepted_answers,
-        explanation: it.explanation,
-        cefr_level: it.cefr_level,
-        verified: true,
-      }))
-    );
-    if (error) throw error;
-  }
-
+  const { inserted } = passing.length ? await insertGrammarExercises(topicSlug, passing) : { inserted: 0 };
   console.log(
-    `grammar (${topicSlug}): ${passing.length}/${items.length} passed verification, ${items.length - passing.length} discarded.`
+    `grammar (${topicSlug}): ${passing.length}/${items.length} passed verification, ${items.length - passing.length} discarded, ${inserted} inserted.`
   );
 }
 

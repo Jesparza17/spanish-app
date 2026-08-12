@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { logReviewEvent } from "./reviewLog";
 import type { ReviewCard } from "./types";
 
 export type ReviewMode =
@@ -86,7 +87,14 @@ async function fetchDueVerbs(userId: string, mode: ReviewMode): Promise<ReviewCa
   }));
 }
 
-export async function submitGrade(srsId: string, easeFactor: number, intervalDays: number, repetitions: number, dueAt: Date) {
+export async function submitGrade(
+  srsId: string,
+  easeFactor: number,
+  intervalDays: number,
+  repetitions: number,
+  dueAt: Date,
+  userId: string
+) {
   const { error } = await supabase
     .from("srs_state")
     .update({
@@ -98,4 +106,5 @@ export async function submitGrade(srsId: string, easeFactor: number, intervalDay
     })
     .eq("id", srsId);
   if (error) throw error;
+  await logReviewEvent(userId, "srs_grade");
 }

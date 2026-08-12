@@ -5,28 +5,45 @@ import { useParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import AuthGate from "@/components/AuthGate";
 import ExerciseCard, { type ExerciseResult } from "@/components/ExerciseCard";
-import { buildTenseQuestions, isCorrectAnswer, recordTenseTestResult, type TenseQuestion } from "@/lib/grammarQueue";
+import {
+  buildTenseQuestions,
+  isCorrectAnswer,
+  recordTenseTestResult,
+  type TenseQuestion,
+  type VerbCategory,
+} from "@/lib/grammarQueue";
 import { CORE_TENSES, TENSE_LABELS, type Tense } from "@/lib/conjugation";
 
 const TEST_LENGTH = 12;
 
+const CATEGORIES: { value: VerbCategory; label: string }[] = [
+  { value: "regular", label: "Regulars" },
+  { value: "irregular", label: "Irregulars" },
+  { value: "mix", label: "Mix" },
+];
+
 function TenseSession({ user, tense }: { user: User; tense: Tense }) {
   const [mode, setMode] = useState<"practice" | "test">("practice");
+  const [category, setCategory] = useState<VerbCategory>("mix");
   const [questions, setQuestions] = useState<TenseQuestion[]>([]);
   const [index, setIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [finished, setFinished] = useState(false);
 
-  const startPractice = useCallback(async () => {
-    setLoading(true);
-    setMode("practice");
-    setFinished(false);
-    setIndex(0);
-    setCorrectCount(0);
-    setQuestions(await buildTenseQuestions(tense, 1));
-    setLoading(false);
-  }, [tense]);
+  const startPractice = useCallback(
+    async (cat: VerbCategory = category) => {
+      setLoading(true);
+      setMode("practice");
+      setCategory(cat);
+      setFinished(false);
+      setIndex(0);
+      setCorrectCount(0);
+      setQuestions(await buildTenseQuestions(tense, 1, cat));
+      setLoading(false);
+    },
+    [tense, category]
+  );
 
   const startTest = useCallback(async () => {
     setLoading(true);
@@ -45,7 +62,7 @@ function TenseSession({ user, tense }: { user: User; tense: Tense }) {
 
   async function handleNextPractice() {
     setLoading(true);
-    setQuestions(await buildTenseQuestions(tense, 1));
+    setQuestions(await buildTenseQuestions(tense, 1, category));
     setIndex(0);
     setLoading(false);
   }
@@ -80,7 +97,7 @@ function TenseSession({ user, tense }: { user: User; tense: Tense }) {
       <div className="max-w-md mx-auto px-6 -mt-6 space-y-5 pb-10">
         <div className="flex gap-2">
           <button
-            onClick={startPractice}
+            onClick={() => startPractice()}
             className={`flex-1 rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors ${
               mode === "practice" ? "bg-ink text-white" : "bg-card text-ink/55 shadow-card"
             }`}
@@ -96,6 +113,22 @@ function TenseSession({ user, tense }: { user: User; tense: Tense }) {
             Test
           </button>
         </div>
+
+        {mode === "practice" && (
+          <div className="flex gap-2">
+            {CATEGORIES.map((c) => (
+              <button
+                key={c.value}
+                onClick={() => startPractice(c.value)}
+                className={`flex-1 rounded-full px-3 py-1.5 font-sans text-xs font-medium transition-colors ${
+                  category === c.value ? "bg-marigold text-white" : "bg-card text-ink/55 shadow-card"
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {mode === "test" && !finished && questions.length > 0 && !loading && (
           <p className="font-sans text-xs text-ink/45 text-center">

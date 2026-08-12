@@ -252,4 +252,100 @@ export const IRREGULAR_VERBS: Record<string, IrregularConjugation> = {
       ustedes: "comiencen",
     },
   },
+  // Otherwise fully regular verbs whose past participle is the one
+  // irregular form — worth curating explicitly rather than letting the
+  // regular rule silently produce "escribido"/"abrido"/"rompido".
+  escribir: {
+    pastParticiple: "escrito",
+  },
+  abrir: {
+    pastParticiple: "abierto",
+  },
+  romper: {
+    pastParticiple: "roto",
+  },
+  cubrir: {
+    pastParticiple: "cubierto",
+  },
+  descubrir: {
+    pastParticiple: "descubierto",
+  },
+  resolver: {
+    presente: { yo: "resuelvo", tu: "resuelves", usted: "resuelve", nosotros: "resolvemos", ustedes: "resuelven" },
+    presente_subjuntivo: {
+      yo: "resuelva",
+      tu: "resuelvas",
+      usted: "resuelva",
+      nosotros: "resolvamos",
+      ustedes: "resuelvan",
+    },
+    pastParticiple: "resuelto",
+  },
+  // Regular preterito now that regularPreterito handles vowel-final stems
+  // (see conjugation.ts) — only presente/subjuntivo need overriding here.
+  caer: {
+    presente: { yo: "caigo", tu: "caes", usted: "cae", nosotros: "caemos", ustedes: "caen" },
+    presente_subjuntivo: { yo: "caiga", tu: "caigas", usted: "caiga", nosotros: "caigamos", ustedes: "caigan" },
+  },
+  valer: {
+    presente: { yo: "valgo", tu: "vales", usted: "vale", nosotros: "valemos", ustedes: "valen" },
+    presente_subjuntivo: { yo: "valga", tu: "valgas", usted: "valga", nosotros: "valgamos", ustedes: "valgan" },
+    futureStem: "valdr",
+  },
+  caber: {
+    presente: { yo: "quepo", tu: "cabes", usted: "cabe", nosotros: "cabemos", ustedes: "caben" },
+    preterito: { yo: "cupe", tu: "cupiste", usted: "cupo", nosotros: "cupimos", ustedes: "cupieron" },
+    presente_subjuntivo: { yo: "quepa", tu: "quepas", usted: "quepa", nosotros: "quepamos", ustedes: "quepan" },
+    futureStem: "cabr",
+  },
+  producir: {
+    presente: { yo: "produzco", tu: "produces", usted: "produce", nosotros: "producimos", ustedes: "producen" },
+    preterito: { yo: "produje", tu: "produjiste", usted: "produjo", nosotros: "produjimos", ustedes: "produjeron" },
+    presente_subjuntivo: {
+      yo: "produzca",
+      tu: "produzcas",
+      usted: "produzca",
+      nosotros: "produzcamos",
+      ustedes: "produzcan",
+    },
+  },
+  traducir: {
+    presente: { yo: "traduzco", tu: "traduces", usted: "traduce", nosotros: "traducimos", ustedes: "traducen" },
+    preterito: { yo: "traduje", tu: "tradujiste", usted: "tradujo", nosotros: "tradujimos", ustedes: "tradujeron" },
+    presente_subjuntivo: {
+      yo: "traduzca",
+      tu: "traduzcas",
+      usted: "traduzca",
+      nosotros: "traduzcamos",
+      ustedes: "traduzcan",
+    },
+  },
+  // -uir verbs: inserts "y" everywhere in presente except nosotros, and
+  // throughout presente_subjuntivo including nosotros. Preterito is
+  // regular now that regularPreterito handles vowel-final (weak-vowel)
+  // stems on its own — construiste/construimos, no accent.
+  construir: {
+    presente: { yo: "construyo", tu: "construyes", usted: "construye", nosotros: "construimos", ustedes: "construyen" },
+    presente_subjuntivo: {
+      yo: "construya",
+      tu: "construyas",
+      usted: "construya",
+      nosotros: "construyamos",
+      ustedes: "construyan",
+    },
+  },
+  huir: {
+    presente: { yo: "huyo", tu: "huyes", usted: "huye", nosotros: "huimos", ustedes: "huyen" },
+    presente_subjuntivo: { yo: "huya", tu: "huyas", usted: "huya", nosotros: "huyamos", ustedes: "huyan" },
+  },
+  vestir: {
+    presente: { yo: "visto", tu: "vistes", usted: "viste", nosotros: "vestimos", ustedes: "visten" },
+    preterito: { yo: "vestí", tu: "vestiste", usted: "vistió", nosotros: "vestimos", ustedes: "vistieron" },
+    presente_subjuntivo: { yo: "vista", tu: "vistas", usted: "vista", nosotros: "vistamos", ustedes: "vistan" },
+  },
+  elegir: {
+    presente: { yo: "elijo", tu: "eliges", usted: "elige", nosotros: "elegimos", ustedes: "eligen" },
+    preterito: { yo: "elegí", tu: "elegiste", usted: "eligió", nosotros: "elegimos", ustedes: "eligieron" },
+    presente_subjuntivo: { yo: "elija", tu: "elijas", usted: "elija", nosotros: "elijamos", ustedes: "elijan" },
+  },
 };

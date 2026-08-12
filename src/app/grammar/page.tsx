@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import AuthGate from "@/components/AuthGate";
 import { fetchGrammarProgress, fetchGrammarTopics } from "@/lib/grammarQueue";
-import { CORE_TENSES, TENSE_LABELS } from "@/lib/conjugation";
+import { CORE_TENSES, TENSE_CEFR_LEVELS, TENSE_LABELS } from "@/lib/conjugation";
 import type { GrammarProgress, GrammarTopic } from "@/lib/types";
 
 function progressPct(progress: GrammarProgress[], scopeType: "topic" | "tense", scopeKey: string): number | null {
@@ -16,7 +17,8 @@ function progressPct(progress: GrammarProgress[], scopeType: "topic" | "tense", 
 }
 
 function GrammarHome({ user }: { user: User }) {
-  const [tab, setTab] = useState<"gramatica" | "verbos">("gramatica");
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<"gramatica" | "verbos">(searchParams.get("tab") === "verbos" ? "verbos" : "gramatica");
   const [topics, setTopics] = useState<GrammarTopic[]>([]);
   const [progress, setProgress] = useState<GrammarProgress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +65,13 @@ function GrammarHome({ user }: { user: User }) {
           <p className="font-sans text-sm text-ink/50">Loading…</p>
         ) : tab === "gramatica" ? (
           <div className="flex flex-col gap-2">
+            <Link
+              href="/grammar/test"
+              className="flex items-center justify-between rounded-2xl bg-ink px-5 py-4 active:scale-[0.98] transition-transform"
+            >
+              <span className="font-display text-base text-white">Test general</span>
+              <span className="font-sans text-xs text-white/60">todos los temas</span>
+            </Link>
             {topics.map((topic) => {
               const pct = progressPct(progress, "topic", topic.slug);
               return (
@@ -102,7 +111,12 @@ function GrammarHome({ user }: { user: User }) {
                   href={`/grammar/verbs/${tense}`}
                   className="flex items-center justify-between rounded-2xl bg-card shadow-card px-5 py-4 active:scale-[0.98] transition-transform"
                 >
-                  <span className="font-display text-base text-ink">{TENSE_LABELS[tense]}</span>
+                  <span>
+                    <span className="block font-display text-base text-ink">{TENSE_LABELS[tense]}</span>
+                    <span className="block font-sans text-xs text-ink/45 mt-0.5 uppercase tracking-wide">
+                      {TENSE_CEFR_LEVELS[tense]}
+                    </span>
+                  </span>
                   <span className="font-sans text-xs font-medium text-agave-dark bg-agave-light rounded-full px-2.5 py-1 shrink-0">
                     {pct ?? 0}%
                   </span>
