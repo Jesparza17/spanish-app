@@ -23,7 +23,7 @@ export const GRAMMAR_TOPICS: GrammarTopicSeed[] = [
     title: "Ser vs. estar",
     category: "fundamentals",
     cefrLevel: "A1",
-    sortOrder: 10,
+    sortOrder: 110,
     explanationMd: `Both mean "to be," but they're not interchangeable.
 
 **Ser** is for identity, origin, and traits that define what something *is*:
@@ -45,7 +45,7 @@ Some adjectives shift meaning depending on which verb you use — see the
     title: "Por vs. para",
     category: "fundamentals",
     cefrLevel: "A2",
-    sortOrder: 20,
+    sortOrder: 140,
     explanationMd: `**Por** points to a cause, a means, or an exchange — the reason *behind*
 something, or movement *through* a place.
 - *Gracias por tu ayuda.* — Thanks for your help.
@@ -66,7 +66,7 @@ at the goal.`,
     title: "Pretérito vs. imperfecto",
     category: "verb_usage",
     cefrLevel: "B1",
-    sortOrder: 30,
+    sortOrder: 210,
     explanationMd: `Both are past tenses, but they answer different questions.
 
 **Pretérito** — a completed action, a single event with a clear beginning
@@ -87,7 +87,7 @@ interrupts it.
     title: "Concordancia de género y número",
     category: "fundamentals",
     cefrLevel: "A1",
-    sortOrder: 40,
+    sortOrder: 10,
     explanationMd: `Every noun in Spanish is masculine or feminine, and articles/adjectives
 must agree with it in both gender and number.
 
@@ -105,7 +105,7 @@ consonant (*grande*, *fácil*) don't change for gender, only for number
     title: "Posición del adjetivo",
     category: "fundamentals",
     cefrLevel: "A2",
-    sortOrder: 50,
+    sortOrder: 20,
     explanationMd: `Most descriptive adjectives go **after** the noun in Spanish.
 - *una casa grande* — a big house
 
@@ -123,7 +123,7 @@ When in doubt, after the noun is the safe, neutral default.`,
     title: "Pronombres de objeto directo",
     category: "pronouns",
     cefrLevel: "A2",
-    sortOrder: 60,
+    sortOrder: 150,
     explanationMd: `The direct object receives the action of the verb directly. Once it's
 established, Spanish usually replaces it with a pronoun rather than
 repeating the noun.
@@ -142,7 +142,7 @@ of an infinitive or gerund: *voy a comprarlo* / *lo voy a comprar*.`,
     title: "Pronombres de objeto indirecto",
     category: "pronouns",
     cefrLevel: "A2",
-    sortOrder: 70,
+    sortOrder: 160,
     explanationMd: `The indirect object is who benefits from or receives the action — often
 "to/for someone."
 
@@ -160,7 +160,7 @@ already there: *Le escribí una carta a él.*`,
     title: "Combinación de pronombres (se lo, se la)",
     category: "pronouns",
     cefrLevel: "B1",
-    sortOrder: 80,
+    sortOrder: 170,
     explanationMd: `When a direct and an indirect object pronoun both appear, the indirect
 one comes first — but *le/les* become **se** right before *lo/la/los/las*
 to avoid the awkward sound of "le lo."
@@ -177,7 +177,7 @@ end of an infinitive/gerund/affirmative command — *voy a dárselo* /
     title: "Verbos reflexivos",
     category: "verb_usage",
     cefrLevel: "A2",
-    sortOrder: 90,
+    sortOrder: 180,
     explanationMd: `A reflexive verb is one where the subject does the action to itself —
 marked with *me/te/se/nos/se*.
 
@@ -196,7 +196,7 @@ before the conjugated verb, or attached to an infinitive/gerund.`,
     title: 'Verbos como "gustar"',
     category: "verb_usage",
     cefrLevel: "A2",
-    sortOrder: 100,
+    sortOrder: 190,
     explanationMd: `*Gustar* doesn't work like "to like" in English — it works like "to be
 pleasing to." The thing being liked is the grammatical subject, and the
 person is an indirect object.
@@ -215,7 +215,7 @@ lacking/missing).
     title: "Comparativos y superlativos",
     category: "fundamentals",
     cefrLevel: "B1",
-    sortOrder: 110,
+    sortOrder: 60,
     explanationMd: `**Comparisons of inequality**: *más/menos ... que*
 - *Ella es más alta que yo.* — She is taller than me.
 
@@ -235,7 +235,7 @@ peor*, *grande → mayor* (age/importance), *pequeño → menor* (age).`,
     title: "Cuándo usar el subjuntivo",
     category: "mood",
     cefrLevel: "B1",
-    sortOrder: 120,
+    sortOrder: 230,
     explanationMd: `The subjunctive isn't a tense, it's a mood — it marks that the speaker is
 expressing doubt, desire, emotion, or something not yet real, usually in a
 clause introduced by *que*.
@@ -256,7 +256,7 @@ structure looks similar.`,
     title: 'La "a" personal',
     category: "fundamentals",
     cefrLevel: "A2",
-    sortOrder: 130,
+    sortOrder: 90,
     explanationMd: `When the direct object of a verb is a specific person (or a pet treated
 like one), Spanish adds **a** right before it — with no equivalent in
 English.
@@ -275,7 +275,7 @@ is usually dropped — *Tengo dos hermanas*, not *Tengo a dos hermanas*.`,
     title: "Ser/estar con adjetivos (cambio de estado)",
     category: "fundamentals",
     cefrLevel: "B1",
-    sortOrder: 140,
+    sortOrder: 130,
     explanationMd: `Some adjectives change meaning depending on whether they follow *ser* or
 *estar* — the *ser* version is an inherent trait, the *estar* version is a
 temporary state or a change from what's expected.
@@ -295,7 +295,7 @@ The pattern to remember: *ser* describes what something fundamentally is,
     title: "Oraciones condicionales con si",
     category: "mood",
     cefrLevel: "B1",
-    sortOrder: 150,
+    sortOrder: 240,
     explanationMd: `Sentences with *si* ("if") come in three main patterns, matched by verb
 mood/tense.
 
@@ -322,7 +322,7 @@ constructions — that's a common learner mistake.`,
     title: "Pronombres relativos (que, quien, el cual)",
     category: "pronouns",
     cefrLevel: "B1",
-    sortOrder: 160,
+    sortOrder: 200,
     explanationMd: `Relative pronouns connect a clause back to a noun already mentioned.
 
 **Que** — the default choice for both people and things, in almost every
@@ -347,7 +347,7 @@ prepositions, useful when *que* would leave it unclear what it refers to.
     title: "El se pasivo e impersonal",
     category: "verb_usage",
     cefrLevel: "B2",
-    sortOrder: 170,
+    sortOrder: 250,
     explanationMd: `Spanish avoids the passive voice (*ser* + participio) in everyday speech —
 the impersonal/passive *se* is far more natural.
 
@@ -370,7 +370,7 @@ formal/written — native speakers reach for *se* first in conversation.`,
     title: "Demostrativos (este, ese, aquel)",
     category: "fundamentals",
     cefrLevel: "A2",
-    sortOrder: 180,
+    sortOrder: 30,
     explanationMd: `Demonstratives point to something based on distance from the speaker.
 
 - **Este/esta/estos/estas** — close to the speaker (this/these).
@@ -392,7 +392,7 @@ thing, not a specific noun:
     title: "Posesivos (mi/tu vs. mío/tuyo)",
     category: "fundamentals",
     cefrLevel: "A2",
-    sortOrder: 190,
+    sortOrder: 40,
     explanationMd: `Short possessives go before the noun; long possessives go after (or stand
 alone) and agree in gender and number.
 
@@ -414,7 +414,7 @@ ella*.`,
     title: "Palabras negativas y doble negación",
     category: "fundamentals",
     cefrLevel: "A2",
-    sortOrder: 200,
+    sortOrder: 80,
     explanationMd: `Spanish allows — and often requires — multiple negative words in one
 sentence, unlike English.
 
@@ -437,7 +437,7 @@ want to go either.`,
     title: "Desde, desde hace, hace que",
     category: "fundamentals",
     cefrLevel: "B1",
-    sortOrder: 210,
+    sortOrder: 220,
     explanationMd: `Three related expressions handle "how long" in Spanish, each with a
 different structure.
 
@@ -460,7 +460,7 @@ For something that stopped happening, switch to pretérito with *hace*:
     title: "Diminutivos y aumentativos",
     category: "fundamentals",
     cefrLevel: "A2",
-    sortOrder: 220,
+    sortOrder: 70,
     explanationMd: `Diminutives (mostly *-ito/-ita*) and augmentatives (*-ote/-ota*,
 *-ísimo/-ísima*) are everywhere in Mexican Spanish — for size, but just as
 often for warmth, politeness, or emphasis.
@@ -483,7 +483,7 @@ Spelling adjusts to keep the sound: *poco → poquito*, *amigo → amiguito*
     title: "Preposiciones: a, en, de, con",
     category: "fundamentals",
     cefrLevel: "B1",
-    sortOrder: 230,
+    sortOrder: 100,
     explanationMd: `Four prepositions cover a lot of ground and don't map neatly onto English
 "to/at/in/of/with."
 
@@ -505,7 +505,7 @@ de la película?* (What do you think of the movie?)`,
     title: "Hay vs. estar",
     category: "fundamentals",
     cefrLevel: "A2",
-    sortOrder: 240,
+    sortOrder: 120,
     explanationMd: `Both can describe presence, but they answer different questions.
 
 **Hay** (from *haber*) — introduces something for the first time, when
@@ -528,7 +528,7 @@ thing is → *estar*.`,
     title: "Estilo indirecto",
     category: "mood",
     cefrLevel: "B2",
-    sortOrder: 250,
+    sortOrder: 260,
     explanationMd: `Reporting what someone said usually shifts the tense one step into the
 past, the same way English does.
 
@@ -549,7 +549,7 @@ question word, with no inverted word order and no question marks:
     title: "Adverbios terminados en -mente",
     category: "fundamentals",
     cefrLevel: "A2",
-    sortOrder: 260,
+    sortOrder: 50,
     explanationMd: `Most manner adverbs are formed by adding *-mente* to the **feminine
 singular** form of the adjective.
 

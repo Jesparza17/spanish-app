@@ -10,49 +10,50 @@ import type { GrammarTopicSeed } from "./grammarTopics.seed";
 export const GRAMMAR_TOPICS_PT: GrammarTopicSeed[] = [
   {
     slug: "intro_pt",
-    title: "Introdução ao português",
+    title: "Introduction to Portuguese",
     category: "introduction",
     cefrLevel: "A1",
     sortOrder: 1,
     language: "pt",
-    explanationMd: `Uma visão geral rápida antes de entrar nos temas específicos — este curso
-usa o **português do Brasil**, então algumas notas aqui não se aplicam a
-Portugal (o pronome *você*, certas palavras, a pronúncia).
+    explanationMd: `A quick overview before diving into specific topics — this course uses
+**Brazilian Portuguese**, so a few notes here don't apply to Portugal
+(the pronoun *você*, certain vocabulary, pronunciation).
 
-**Pronúncia — alguns sons que não existem em espanhol/inglês:**
-- **ão** é um som nasal, meio "ãu" — *pão*, *não*, *coração*.
-- **lh** soa como o "lli" de "million" — *filho*, *trabalho*.
-- **nh** soa como o "ñ" espanhol — *amanhã*, *banho*.
-- **ç** soa sempre como "s" — *começar*, *coração*.
-- No fim da palavra, **-e** e **-o** geralmente são reduzidos: *dente* soa
-  quase como "dentchi", *carro* quase como "carru".
+**Pronunciation — a few sounds that don't exist in Spanish/English:**
+- **ão** is a nasal sound, roughly "ow" through the nose — *pão*, *não*,
+  *coração*.
+- **lh** sounds like the "lli" in "million" — *filho*, *trabalho*.
+- **nh** sounds like the Spanish "ñ" — *amanhã*, *banho*.
+- **ç** always sounds like "s" — *começar*, *coração*.
+- At the end of a word, **-e** and **-o** are usually reduced: *dente*
+  sounds almost like "dentchi," *carro* almost like "carru."
 
-**Gênero e artigos** — como em espanhol, todo substantivo é masculino ou
-feminino (*o livro*, *a mesa*), com concordância nos adjetivos. Veja o
-tema "Gênero e concordância" para as regras completas.
+**Gender and articles** — like Spanish, every noun is masculine or
+feminine (*o livro*, *a mesa*), with adjectives agreeing accordingly. See
+the "Gender and agreement" topic for the full rules.
 
-**Você, não tu** — no Brasil, o pronome do dia a dia para "you" é
-**você**, que usa a conjugação da terceira pessoa. Veja o tema "Você vs.
-tu" para o porquê.
+**Você, not tu** — in Brazil, the everyday pronoun for "you" is **você**,
+which takes third-person conjugation. See the "Você vs. tu" topic for why.
 
-**Ordem das palavras** — sujeito-verbo-objeto, como em português/espanhol/
-inglês: *Eu como pão.* As perguntas de sim/não geralmente não invertem a
-ordem, só mudam a entonação: *Você fala inglês?*
+**Word order** — subject-verb-object, like Portuguese/Spanish/English:
+*Eu como pão.* — I eat bread. Yes/no questions usually don't invert word
+order, just intonation: *Você fala inglês?* — Do you speak English?
 
-**Negação** — *não* vem antes do verbo: *Eu não sei.* Diferente do
-espanhol, o português não costuma duplicar a negação com outra palavra
-negativa depois.
+**Negation** — *não* goes before the verb: *Eu não sei.* — I don't know.
+Unlike Spanish, Portuguese doesn't typically double up the negation with
+another negative word afterward.
 
-**Frases essenciais para começar:**
+**Essential phrases to start with:**
 - *Oi!* / *Olá!* — Hi!
 - *Bom dia* / *Boa tarde* / *Boa noite* — Good morning/afternoon/evening
-- *Por favor* / *Obrigado* (homem) / *Obrigada* (mulher) — Please / Thank
-  you (thank-you agrees with the speaker's gender, not the listener's)
+- *Por favor* / *Obrigado* (said by a man) / *Obrigada* (said by a woman)
+  — Please / Thank you (thank-you agrees with the speaker's gender, not
+  the listener's)
 - *Com licença* — Excuse me
 - *Desculpa* — Sorry
 - *Tudo bem?* — How's it going? (extremely common, very casual)
 
-A partir daqui, os temas seguintes aprofundam cada uma dessas ideias.`,
+From here, the following topics dig deeper into each of these ideas.`,
   },
   {
     slug: "pronomes_pessoais_pt",
@@ -84,7 +85,7 @@ dia: eu, você (=ele/ela), nós, vocês (=eles/elas).`,
     title: "Ser vs. estar",
     category: "fundamentals",
     cefrLevel: "A1",
-    sortOrder: 10,
+    sortOrder: 15,
     language: "pt",
     explanationMd: `Os dois significam "to be," mas não são intercambiáveis.
 
@@ -107,7 +108,7 @@ paralelo direto do mesmo fenômeno em espanhol.`,
     title: "Concordância de gênero e número",
     category: "fundamentals",
     cefrLevel: "A1",
-    sortOrder: 15,
+    sortOrder: 10,
     language: "pt",
     explanationMd: `Todo substantivo em português é masculino ou feminino, e artigos/adjetivos
 precisam concordar com ele em gênero e número.

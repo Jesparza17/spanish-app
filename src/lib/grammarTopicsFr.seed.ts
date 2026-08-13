@@ -8,53 +8,54 @@ import type { GrammarTopicSeed } from "./grammarTopics.seed";
 export const GRAMMAR_TOPICS_FR: GrammarTopicSeed[] = [
   {
     slug: "intro_fr",
-    title: "Introduction au français",
+    title: "Introduction to French",
     category: "introduction",
     cefrLevel: "A1",
     sortOrder: 1,
     language: "fr",
-    explanationMd: `Un aperçu rapide avant d'entrer dans les sujets spécifiques — ce cours
-utilise le **français standard (de France)**. Le français du Québec ou
-d'Afrique diffère sur certains points de vocabulaire et de prononciation,
-mais la grammaire de base reste la même.
+    explanationMd: `A quick overview before diving into specific topics — this course uses
+**standard (Metropolitan France) French**. Québécois or African French
+differ on some vocabulary and pronunciation points, but the core grammar
+stays the same.
 
-**Prononciation — quelques pièges pour un débutant :**
-- Les consonnes finales sont généralement **muettes** : *petit* se
-  prononce sans le "t", *beaucoup* sans le "p" final.
-- Les voyelles nasales (**an, en, in, on, un**) n'ont pas d'équivalent en
-  espagnol — *pain*, *bon*, *un*.
-- La **liaison** : une consonne finale muette se prononce parfois devant
-  une voyelle — *les amis* se dit "lez-ami", pas "le-ami".
-- **H** ne se prononce jamais, mais certains mots se comportent comme
-  s'ils commençaient par une consonne (*le héros*, pas *l'héros*) — ce
-  sont des exceptions à apprendre au cas par cas.
+**Pronunciation — a few pitfalls for a beginner:**
+- Final consonants are usually **silent**: *petit* is pronounced without
+  the "t," *beaucoup* without the final "p."
+- The nasal vowels (**an, en, in, on, un**) have no equivalent in
+  Spanish — *pain*, *bon*, *un*.
+- **Liaison**: a silent final consonant is sometimes pronounced before a
+  vowel — *les amis* is said "lez-ami," not "le-ami."
+- **H** is never pronounced, but some words behave as if they started
+  with a consonant (*le héros*, not *l'héros*) — these are exceptions
+  learned case by case.
 
-**Genre et articles** — comme en espagnol, chaque nom est masculin ou
-féminin (*le livre*, *la table*), avec accord des adjectifs. Voir le
-sujet "Genre et accord" pour les règles complètes.
+**Gender and articles** — like Spanish, every noun is masculine or
+feminine (*le livre*, *la table*), with adjectives agreeing accordingly.
+See the "Gender and agreement" topic for the full rules.
 
-**Tu et vous, tous les deux actifs** — contrairement aux simplifications
-faites pour l'espagnol et le portugais dans ce cours, le français utilise
-vraiment les deux formes au quotidien. Voir le sujet "Tu vs. vous."
+**Tu and vous, both active** — unlike the simplifications made for
+Spanish and Portuguese in this course, French genuinely uses both forms
+in everyday speech. See the "Tu vs. vous" topic.
 
-**Ordre des mots** — sujet-verbe-objet, comme en espagnol/portugais/
-anglais : *Je mange du pain.* Les questions simples peuvent se former
-juste avec l'intonation (*Tu parles anglais?*), ou avec *est-ce que*
-(*Est-ce que tu parles anglais?*).
+**Word order** — subject-verb-object, like Spanish/Portuguese/English:
+*Je mange du pain.* — I eat bread. Simple questions can be formed just
+with intonation (*Tu parles anglais?*), or with *est-ce que* (*Est-ce que
+tu parles anglais?*).
 
-**Négation** — le français encadre le verbe avec **ne... pas** : *Je ne
-sais pas.* À l'oral courant, le "ne" est souvent laissé de côté (*Je sais
-pas*), mais à l'écrit et dans ce cours, on garde la forme complète.
+**Negation** — French wraps the verb with **ne... pas**: *Je ne sais
+pas.* — I don't know. In everyday spoken French, the "ne" is often
+dropped (*Je sais pas*), but in writing and in this course, the full form
+is kept.
 
-**Phrases essentielles pour commencer :**
-- *Bonjour!* / *Salut!* — Hello! / Hi! (salut est plus familier)
+**Essential phrases to start with:**
+- *Bonjour!* / *Salut!* — Hello! / Hi! (salut is more casual)
 - *Bonsoir* — Good evening
 - *S'il vous plaît* / *Merci* — Please / Thank you
 - *Excusez-moi* — Excuse me
 - *Pardon* — Sorry
 - *Comment ça va?* / *Ça va?* — How's it going?
 
-À partir d'ici, les sujets suivants approfondissent chacune de ces idées.`,
+From here, the following topics dig deeper into each of these ideas.`,
   },
   {
     slug: "tu_vous_fr",
