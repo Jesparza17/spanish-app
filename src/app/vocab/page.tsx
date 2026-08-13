@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import AuthGate from "@/components/AuthGate";
 import ReviewCard from "@/components/ReviewCard";
@@ -19,18 +20,27 @@ const ITEM_KINDS: { value: "both" | "vocab" | "verb"; label: string }[] = [
 
 const DIRECTION_STORAGE_KEY = "cuaderno-review-direction";
 
-// Verb frequency-range filter presets — steps of a single slider, all
-// anchored at rank 1 (most common). null = no filtering ("All").
+// Verb frequency-range filter presets — steps of a single slider. Ordered
+// by max rank ascending (min as tiebreaker), not all anchored at rank 1, so
+// you can drill a specific band (e.g. "200-500") instead of only "top N".
+// null = no filtering ("All").
 const FREQ_BANDS: { label: string; range: { min: number; max: number } | null }[] = [
   { label: "All", range: null },
   { label: "Top 50", range: { min: 1, max: 50 } },
   { label: "Top 200", range: { min: 1, max: 200 } },
   { label: "Top 500", range: { min: 1, max: 500 } },
+  { label: "200-500", range: { min: 200, max: 500 } },
   { label: "Top 1000", range: { min: 1, max: 1000 } },
+  { label: "500-1000", range: { min: 500, max: 1000 } },
 ];
 
 function ReviewSession({ user }: { user: User }) {
   const { language } = useLanguage();
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get("status");
+  const [statusMode, setStatusMode] = useState<"new" | "struggling" | null>(
+    initialStatus === "new" || initialStatus === "struggling" ? initialStatus : null
+  );
   const [themes, setThemes] = useState<Theme[]>([]);
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   const [itemKind, setItemKind] = useState<"both" | "vocab" | "verb">("both");
@@ -61,15 +71,17 @@ function ReviewSession({ user }: { user: User }) {
 
   useEffect(() => {
     setLoading(true);
-    const mode = selectedThemeId
-      ? ({ type: "theme", themeId: selectedThemeId } as const)
-      : freqBand.range
-        ? ({ type: "frequencyRange", min: freqBand.range.min, max: freqBand.range.max } as const)
-        : ({ type: "frequency" } as const);
+    const mode = statusMode
+      ? ({ type: "status", status: statusMode } as const)
+      : selectedThemeId
+        ? ({ type: "theme", themeId: selectedThemeId } as const)
+        : freqBand.range
+          ? ({ type: "frequencyRange", min: freqBand.range.min, max: freqBand.range.max } as const)
+          : ({ type: "frequency" } as const);
     fetchDueQueue(user.id, itemKind, mode, language)
       .then(setQueue)
       .finally(() => setLoading(false));
-  }, [user.id, selectedThemeId, itemKind, language, freqBand]);
+  }, [user.id, statusMode, selectedThemeId, itemKind, language, freqBand]);
 
   async function fetchSrsState(srsId: string) {
     const { data: row } = await supabase
@@ -139,25 +151,38 @@ function ReviewSession({ user }: { user: User }) {
           </button>
         </div>
 
-        {itemKind !== "vocab" && selectedThemeId === null && (
-          <div className="rounded-2xl bg-card shadow-card px-4 py-3 mb-6">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="font-sans text-xs text-ink/50">Verb frequency</p>
-              <p className="font-sans text-xs font-medium text-ink/70">{freqBand.label}</p>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={FREQ_BANDS.length - 1}
-              step={1}
-              value={freqBandIndex}
-              onChange={(e) => setFreqBandIndex(Number(e.target.value))}
-              className="w-full accent-marigold"
-            />
+        {statusMode ? (
+          <div className="flex items-center justify-between rounded-2xl bg-marigold-light px-4 py-3 mb-6">
+            <p className="font-sans text-xs font-medium text-marigold-dark">
+              {statusMode === "new" ? "New words & verbs" : "Words & verbs you're struggling with"}
+            </p>
+            <button onClick={() => setStatusMode(null)} className="font-sans text-xs text-marigold-dark underline underline-offset-2">
+              Clear
+            </button>
           </div>
-        )}
+        ) : (
+          <>
+            {itemKind !== "vocab" && selectedThemeId === null && (
+              <div className="rounded-2xl bg-card shadow-card px-4 py-3 mb-6">
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="font-sans text-xs text-ink/50">Verb frequency</p>
+                  <p className="font-sans text-xs font-medium text-ink/70">{freqBand.label}</p>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={FREQ_BANDS.length - 1}
+                  step={1}
+                  value={freqBandIndex}
+                  onChange={(e) => setFreqBandIndex(Number(e.target.value))}
+                  className="w-full accent-marigold"
+                />
+              </div>
+            )}
 
-        <ThemeToggle themes={themes} selectedThemeId={selectedThemeId} onSelect={setSelectedThemeId} />
+            <ThemeToggle themes={themes} selectedThemeId={selectedThemeId} onSelect={setSelectedThemeId} />
+          </>
+        )}
 
         {loading ? (
           <p className="font-sans text-sm text-ink/50">Loading…</p>

@@ -30,6 +30,8 @@ interface VocabCandidate {
   example_sentence: string;
   example_translation: string;
   cefr_level: CefrLevel;
+  /** Only meaningful when part_of_speech is "noun" — drives the gender-practice drill. */
+  gender?: "m" | "f";
 }
 
 interface VerbCandidate {
@@ -83,7 +85,7 @@ async function runVocab(count: number, theme?: string) {
 Generate ${count} Spanish vocabulary items (nouns, adjectives, adverbs — not verbs) for a Mexican-Spanish learning app.
 ${MEXICAN_SPANISH_BRIEF}
 
-For each item give: lemma (dictionary form), translation, part of speech, one natural example sentence a Mexican Spanish speaker would actually say in daily conversation or literature, its English translation, and an estimated CEFR level (A1-C2) for the word itself.
+For each item give: lemma (dictionary form), translation, part of speech, one natural example sentence a Mexican Spanish speaker would actually say in daily conversation or literature, its English translation, an estimated CEFR level (A1-C2) for the word itself, and — only when part of speech is "noun" — its grammatical gender ("m" or "f").
 
 Use web search where it helps ground word choice and frequency in real Mexican Spanish usage, not just your prior knowledge.
 
@@ -107,6 +109,7 @@ List all ${count} items clearly, one per numbered entry, with each field labeled
             example_sentence: { type: "string" },
             example_translation: { type: "string" },
             cefr_level: CEFR_SCHEMA_FIELD,
+            gender: { type: "string", enum: ["m", "f"] },
           },
           required: ["lemma", "translation", "part_of_speech", "example_sentence", "example_translation", "cefr_level"],
           additionalProperties: false,
@@ -127,8 +130,8 @@ List all ${count} items clearly, one per numbered entry, with each field labeled
   const passing: VocabCandidate[] = [];
   for (const item of items) {
     const pass = await passesUnanimousVerification(
-      `Lemma: ${item.lemma}\nPart of speech: ${item.part_of_speech}\nTranslation: ${item.translation}\nExample sentence: ${item.example_sentence}\nExample translation: ${item.example_translation}\nClaimed CEFR level: ${item.cefr_level}`,
-      `1. The lemma and example sentence are 100% grammatically correct standard Spanish.\n2. The example sentence is natural — a native Mexican Spanish speaker would actually say it, not an awkward or overly literal construction.\n3. No vosotros forms.\n4. The translation and example translation are accurate.\n5. The CEFR level is a reasonable estimate for this word.\n6. The register is standard/proper, not slang.`
+      `Lemma: ${item.lemma}\nPart of speech: ${item.part_of_speech}\nTranslation: ${item.translation}\nExample sentence: ${item.example_sentence}\nExample translation: ${item.example_translation}\nClaimed CEFR level: ${item.cefr_level}${item.gender ? `\nClaimed gender: ${item.gender}` : ""}`,
+      `1. The lemma and example sentence are 100% grammatically correct standard Spanish.\n2. The example sentence is natural — a native Mexican Spanish speaker would actually say it, not an awkward or overly literal construction.\n3. No vosotros forms.\n4. The translation and example translation are accurate.\n5. The CEFR level is a reasonable estimate for this word.\n6. The register is standard/proper, not slang.${item.gender ? "\n7. If a gender is claimed, it is the correct grammatical gender for this noun." : ""}`
     );
     if (pass) passing.push(item);
   }

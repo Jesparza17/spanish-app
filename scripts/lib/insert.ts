@@ -16,6 +16,8 @@ export interface VocabInsert {
   example_translation: string;
   cefr_level: CefrLevel;
   frequency_rank?: number;
+  /** Only meaningful when part_of_speech is "noun" — drives the gender-practice drill. */
+  gender?: "m" | "f";
 }
 
 export interface VerbInsert {

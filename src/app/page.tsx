@@ -138,6 +138,13 @@ function Dashboard({ user }: { user: User }) {
               </div>
             </div>
 
+            <Link href="/plan" className="block rounded-2xl bg-card shadow-card px-5 py-5 active:scale-[0.98] transition-transform">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-display text-lg text-ink">Study plan</span>
+              </div>
+              <p className="font-sans text-sm text-ink/55">A daily mix of reviews, new content, and what you're struggling with.</p>
+            </Link>
+
             <Link href="/vocab" className="block rounded-2xl bg-card shadow-card px-5 py-5 active:scale-[0.98] transition-transform">
               <div className="flex items-center justify-between mb-3">
                 <span className="font-display text-lg text-ink">Vocab & verbos</span>
@@ -209,6 +216,13 @@ function Dashboard({ user }: { user: User }) {
                   {stats.verbos.testsDue} test{stats.verbos.testsDue === 1 ? "" : "s"} ready for retest
                 </span>
               )}
+            </Link>
+
+            <Link href="/grammar/gender" className="block rounded-2xl bg-card shadow-card px-5 py-5 active:scale-[0.98] transition-transform">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-display text-lg text-ink">Género</span>
+              </div>
+              <p className="font-sans text-sm text-ink/55">Rapid-fire masculine/feminine practice for nouns.</p>
             </Link>
           </>
         )}

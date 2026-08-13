@@ -92,6 +92,13 @@ function GrammarHome({ user }: { user: User }) {
               <span className="font-display text-base text-white">Test general</span>
               <span className="font-sans text-xs text-white/60">todos los temas</span>
             </Link>
+            <Link
+              href="/grammar/gender"
+              className="flex items-center justify-between rounded-2xl bg-ink px-5 py-4 active:scale-[0.98] transition-transform"
+            >
+              <span className="font-display text-base text-white">Género</span>
+              <span className="font-sans text-xs text-white/60">práctica rápida</span>
+            </Link>
             {topics.map((topic) => {
               const pct = progressPct(progress, "topic", topic.slug);
               const tier = tierFor(progress, "topic", topic.slug);

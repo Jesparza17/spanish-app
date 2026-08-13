@@ -14,6 +14,7 @@ export interface VocabItem {
   example_sentence: string;
   example_translation: string;
   cefr_level: CefrLevel;
+  gender: "m" | "f" | null;
 }
 
 export interface Verb {

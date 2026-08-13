@@ -244,7 +244,7 @@ function computeGrammarStats(topics: GrammarTopic[], progress: GrammarProgress[]
 // Portuguese/French are "pt:"/"fr:"-prefixed. Needed here too so a tense
 // row from one language's practice doesn't get counted on another
 // language's dashboard.
-function scopeKeyBelongsToLanguage(scopeKey: string, language: Language): boolean {
+export function scopeKeyBelongsToLanguage(scopeKey: string, language: Language): boolean {
   if (language === "es") return !scopeKey.includes(":");
   return scopeKey.startsWith(`${language}:`);
 }

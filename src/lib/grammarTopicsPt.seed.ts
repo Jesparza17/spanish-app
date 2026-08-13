@@ -191,4 +191,172 @@ Brasil, é comum evitar essa colocação e usar o pronome antes do verbo em
 quase todo contexto, ou substituir pelo pronome pessoal (*ele/ela*) depois
 do verbo.`,
   },
+  {
+    slug: "possessivos_pt",
+    title: "Possessive adjectives and pronouns",
+    category: "fundamentals",
+    cefrLevel: "A2",
+    sortOrder: 70,
+    language: "pt",
+    explanationMd: `Portuguese possessives come in two forms: **short possessives** that go before the noun, and **long possessives** that go after the noun or stand alone.
+
+**Short form** (meu/minha, teu/tua, seu/sua, nosso/nossa, vosso/vossa — used in all persons): appears before the noun and agrees in gender and number with the noun, not the possessor.
+- *Meu livro é azul.* — My book is blue.
+- *Tua casa fica longe.* — Your house is far away.
+- *Nossos amigos vêm amanhã.* — Our friends are coming tomorrow.
+
+**Long form** (meu/a, teu/a, seu/a, nosso/a, vosso/a) — stands after the noun or replaces it entirely, and also agrees with the noun. Often used with the definite article (*o meu*, *a minha*).
+- *Este livro é meu.* — This book is mine.
+- *Aquele carro é deles.* — That car is theirs.
+- *O nosso apartamento é novo.* — Our apartment is new.
+
+**Note**: Brazilian Portuguese rarely uses *vosso* or *teu*; **você** (taking *seu/sua*) is the standard form.`,
+  },
+  {
+    slug: "demonstrativos_pt",
+    title: "Demonstrative pronouns and adjectives",
+    category: "fundamentals",
+    cefrLevel: "A2",
+    sortOrder: 80,
+    language: "pt",
+    explanationMd: `Demonstratives point to something based on distance from the speaker and listener.
+
+**Este/esta/estes/estas** (feminine agrees with noun) — close to the speaker (this/these).
+- *Este livro aqui é meu.* — This book here is mine.
+- *Estes dias foram interessantes.* — These days have been interesting.
+
+**Esse/essa/esses/essas** — close to the listener, or at moderate distance (that/those).
+- *Você gosta desse café?* — Do you like that coffee?
+- *Esses alunos na frente são muito quietos.* — Those students in front are very quiet.
+
+**Aquele/aquela/aqueles/aquelas** — far from both speaker and listener (that over there/those over there).
+- *Aquele prédio lá é muito velho.* — That building over there is very old.
+- *Aquela vez, chovia muito.* — That time (way back when), it was raining a lot.
+
+**Neuter forms** (isto, isso, aquilo) refer to ideas, situations, or unnamed things:
+- *Isso não me parece correto.* — That doesn't seem right to me.
+- *Aquilo foi uma surpresa!* — That was a surprise!`,
+  },
+  {
+    slug: "verbos_reflexivos_pt",
+    title: "Reflexive verbs",
+    category: "verb_usage",
+    cefrLevel: "A2",
+    sortOrder: 90,
+    language: "pt",
+    explanationMd: `A reflexive verb is one where the subject does the action to itself — marked with *me*, *te*, *se*, *nos*, *vos*.
+
+**Common reflexive verbs:**
+- *Acordar* (to wake up) → *Eu me acordo cedo.* — I wake (myself) up early.
+- *Sentar* (to sit down) → *Ela se senta na cadeira.* — She sits down.
+- *Divertir* (to have fun) → *Nós nos divertimos na festa.* — We had fun at the party.
+- *Lavar* (to wash/bathe) → *Você se lava antes de sair?* — Do you wash yourself before going out?
+
+**Meaning shift with reflexives:** some verbs change meaning when made reflexive:
+- *Dormir* (to sleep) vs. *dormir-se* (to fall asleep)
+- *Ir* (to go) vs. *ir-se* (to leave/go away)
+- *Perder* (to lose) vs. *perder-se* (to get lost)
+
+**Placement rule**: the reflexive pronoun comes right before the conjugated verb in most Brazilian Portuguese (or attaches to an infinitive after *a*, *de*, *para*): *Vou me levantar cedo.* — I'm going to get up early.`,
+  },
+  {
+    slug: "estar_gerundio_pt",
+    title: "Present continuous with estar + gerund",
+    category: "verb_usage",
+    cefrLevel: "A2",
+    sortOrder: 100,
+    language: "pt",
+    explanationMd: `The progressive aspect in Portuguese is formed with **estar + gerund** (the *-ando/-endo* form of the verb). This shows an action in progress right now.
+
+**Formation**: take the conjugated form of *estar*, then add the gerund (infinitive stem + *-ando* for -ar verbs, *-endo* for -er/-ir verbs).
+- *Falar* → *falando*: *Estou falando com meu amigo.* — I am speaking with my friend.
+- *Comer* → *comendo*: *O cachorro está comendo.* — The dog is eating.
+- *Sair* → *saindo*: *Eles estão saindo de casa.* — They are leaving the house.
+
+**Common irregular gerunds** (stem changes):
+- *Vir* → *vindo*: *Você está vindo para a reunião?* — Are you coming to the meeting?
+- *Trazer* → *trazendo*: *Ela está trazendo o bolo.* — She is bringing the cake.
+- *Dizer* → *dizendo*: *O que você está dizendo?* — What are you saying?
+
+**Note**: the gerund never changes for person or number — only *estar* conjugates. *Estou correndo* and *Você está correndo* have the same gerund *correndo*.`,
+  },
+  {
+    slug: "comparativos_superlativos_pt",
+    title: "Comparatives and superlatives",
+    category: "fundamentals",
+    cefrLevel: "B1",
+    sortOrder: 110,
+    language: "pt",
+    explanationMd: `Portuguese comparatives and superlatives follow straightforward patterns, with a few irregular forms to memorize.
+
+**Comparisons of inequality**: *mais/menos ... que* (more/less ... than)
+- *Ele é mais alto que sua irmã.* — He is taller than his sister.
+- *Este livro é menos interessante que aquele.* — This book is less interesting than that one.
+
+**Comparisons of equality**: *tão ... quanto* (as ... as, for adjectives/adverbs); *tanto/a(s) ... quanto* (as much/many ... as, for nouns)
+- *Você é tão inteligente quanto ele.* — You are as intelligent as he is.
+- *Ele fala português tão bem quanto inglês.* — He speaks Portuguese as well as English.
+- *Ela tem tantos amigos quanto eu.* — She has as many friends as I do.
+
+**Superlatives**: *o/a mais ... de* / *o/a menos ... de* (the most/least ...)
+- *Rio de Janeiro é a cidade mais bonita do Brasil.* — Rio de Janeiro is the most beautiful city in Brazil.
+- *Ele é o aluno menos interessado da turma.* — He is the least interested student in the class.
+
+**Irregular comparatives and superlatives**:
+- *Bom* (good) → *melhor* (better) → *o melhor* (the best)
+- *Mau* (bad) → *pior* (worse) → *o pior* (the worst)
+- *Grande* (big/great) → *maior* (bigger/greater) → *o maior* (the biggest)
+- *Pequeno* (small) → *menor* (smaller) → *o menor* (the smallest)`,
+  },
+  {
+    slug: "colocacao_pronominal_pt",
+    title: "Pronoun placement: próclise, enclise, and mesoclise",
+    category: "pronouns",
+    cefrLevel: "B1",
+    sortOrder: 120,
+    language: "pt",
+    explanationMd: `In Portuguese, object pronouns (o/a/os/as, me, te, lhe, etc.) move depending on context — this is called **pronominal placement**, and Brazilian Portuguese is more flexible than written/formal Portuguese.
+
+**Próclise** (pronoun before the verb) — used in these cases:
+- After negative words: *Não te vi ontem.* — I didn't see you yesterday.
+- After certain conjunctions (*que*, *se*, *porque*, *quando*): *Quando você me chamou, eu estava dormindo.* — When you called me, I was sleeping.
+- After adverbs (except final position): *Talvez a encontre amanhã.* — Maybe I'll find her tomorrow.
+- In questions: *Você a conhece?* — Do you know her?
+- In subordinate clauses: *Se o vir, diga-lhe que liguei.* — If you see him, tell him I called.
+
+**Enclise** (pronoun attached to the end with a hyphen) — used in affirmative commands and sentences with no triggering word:
+- *Chama-o para a reunião.* — Call him for the meeting. (plain statement)
+- *Dê-me a chave.* — Give me the key. (command)
+
+**Mesoclise** (pronoun within a future or conditional form) — formal/written Portuguese:
+- *Chamar-te-ei amanhã.* — I will call you tomorrow. (rare in modern Brazilian speech; *vou te chamar* is standard)
+
+**Brazilian note**: in everyday speech, próclise is far more common than enclise, and mesoclise is rarely used at all — most speakers say *vou te chamar* rather than *chamar-te-ei*.`,
+  },
+  {
+    slug: "futuro_subjuntivo_pt",
+    title: "Future subjunctive in conditional clauses",
+    category: "mood",
+    cefrLevel: "B2",
+    sortOrder: 130,
+    language: "pt",
+    explanationMd: `The **future subjunctive** is a distinctive Portuguese tense (less common in Spanish, rare in French) — it expresses a hypothetical future condition that hasn't yet been determined. It appears mainly in *se* clauses when the condition might or might not happen.
+
+**Formation**: for regular verbs, take the third-person plural preterite form and remove the *-m*, then add endings: *-ar → -ar/-ares/-ar/-armos/-ardes/-arem*, *-er → -er/-eres/-er/-ermos/-erdes/-erem*, *-ir → -ir/-ires/-ir/-irmos/-irdes/-irem*.
+- *Falar* (preterite: *falaram*) → *se eu falar* (if I speak), *se você falar* (if you speak)
+- *Vender* (preterite: *venderam*) → *se eu vender* (if I sell)
+- *Partir* (preterite: *partiram*) → *se eu partir* (if I leave)
+
+**Pattern**: *se* + future subjunctive, + future indicative (or imperative):
+- *Se você me ligar amanhã, eu vou estar em casa.* — If you call me tomorrow, I will be at home.
+- *Se chover no fim de semana, ficaremos em casa.* — If it rains on the weekend, we will stay home.
+- *Quando você chegar, nos avise.* — Whenever you arrive, let us know. (when used with *quando/assim que*, it still takes future subjunctive)
+
+**Irregular forms** follow the preterite stem:
+- *Ser* (preterite: *foram*) → *if I be*: *Se você for lá, traga-me um presente.* — If you go there, bring me a present.
+- *Ir* (same as *ser*): *Se ele ir*, he goes (conditional future)
+- *Estar* (preterite: *estiveram*) → *if I stay*: *Se você estiver aqui amanhã...*
+
+**Note**: This is one of the most distinctively Portuguese features — Spanish uses conditional + present indicative instead; the future subjunctive keeps Portuguese clear about future contingencies.`,
+  },
 ];
