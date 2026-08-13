@@ -96,7 +96,9 @@ export async function fetchGrammarTopicBySlug(slug: string): Promise<GrammarTopi
 export async function fetchGrammarProgress(userId: string): Promise<GrammarProgress[]> {
   const { data, error } = await supabase
     .from("grammar_progress")
-    .select("scope_type, scope_key, correct_count, attempt_count, best_test_score, last_practiced_at")
+    .select(
+      "scope_type, scope_key, correct_count, attempt_count, best_test_score, last_practiced_at, interval_days, next_due_at, last_test_score"
+    )
     .eq("user_id", userId);
   if (error) throw error;
   return (data ?? []).map((row: any) => ({
@@ -106,6 +108,9 @@ export async function fetchGrammarProgress(userId: string): Promise<GrammarProgr
     attemptCount: row.attempt_count,
     bestTestScore: row.best_test_score,
     lastPracticedAt: row.last_practiced_at,
+    intervalDays: row.interval_days,
+    nextDueAt: row.next_due_at,
+    lastTestScore: row.last_test_score,
   }));
 }
 
@@ -495,36 +500,88 @@ export function isCorrectAnswer(input: string, accepted: string[]): boolean {
   return accepted.some((a) => a.trim().toLowerCase() === normalized);
 }
 
+// 26/30 was the user's illustrative pass mark — none of the four test surfaces
+// actually run 30 questions (10/12/15), so this is applied as a percentage.
+export const TEST_PASS_THRESHOLD = 26 / 30;
+
+export type MasteryTier = "none" | "bronze" | "silver" | "gold";
+
+/** Derived from interval_days at read time — never stored as its own column, same pattern as the vocab mastery-bucket dashboard widget. */
+export function masteryTierFromInterval(intervalDays: number): MasteryTier {
+  if (intervalDays >= 60) return "gold";
+  if (intervalDays >= 14) return "silver";
+  if (intervalDays >= 1) return "bronze";
+  return "none";
+}
+
+// A lapse costs roughly two tiers of progress, not the whole climb — one bad
+// day at gold (interval >= 60) should land you back around silver, not get
+// wiped to bronze the way a hard reset-to-1 would. Well-established scopes
+// (long interval = many consecutive passes already banked) are correspondingly
+// more resilient to a single miss than a scope that's barely graduated —
+// same "deeper retention forgives more" property real SRS lapse handling has.
+const LAPSE_FACTOR = 0.3;
+
+// Anki-style graduating interval for a whole test's pass/fail, deliberately
+// simpler than srs.ts's SM-2 (no ease factor) — a test is retaken far less
+// often than a single flashcard, so coarse doubling with a 180-day cap is
+// enough resolution.
+export function nextTestInterval(currentIntervalDays: number, passed: boolean): number {
+  if (!passed) return Math.max(1, Math.round(currentIntervalDays * LAPSE_FACTOR));
+  if (currentIntervalDays < 1) return 1;
+  if (currentIntervalDays < 3) return 3;
+  if (currentIntervalDays < 7) return 7;
+  if (currentIntervalDays < 14) return 14;
+  return Math.min(Math.round(currentIntervalDays * 2), 180);
+}
+
+export interface TestOutcome {
+  passed: boolean;
+  intervalDays: number;
+  tier: MasteryTier;
+}
+
 async function upsertProgress(
   userId: string,
   scopeType: "topic" | "tense" | "combined" | "tense_group",
   scopeKey: string,
-  patch: { correctDelta: number; attemptDelta: number; bestTestScore?: number }
-) {
+  patch: { correctDelta: number; attemptDelta: number; bestTestScore?: number; testOutcome?: { correct: number; total: number } }
+): Promise<TestOutcome | null> {
   const { data: existing } = await supabase
     .from("grammar_progress")
-    .select("correct_count, attempt_count, best_test_score")
+    .select("correct_count, attempt_count, best_test_score, interval_days")
     .eq("user_id", userId)
     .eq("scope_type", scopeType)
     .eq("scope_key", scopeKey)
     .maybeSingle();
 
-  const { error } = await supabase.from("grammar_progress").upsert(
-    {
-      user_id: userId,
-      scope_type: scopeType,
-      scope_key: scopeKey,
-      correct_count: (existing?.correct_count ?? 0) + patch.correctDelta,
-      attempt_count: (existing?.attempt_count ?? 0) + patch.attemptDelta,
-      best_test_score:
-        patch.bestTestScore !== undefined
-          ? Math.max(existing?.best_test_score ?? 0, patch.bestTestScore)
-          : existing?.best_test_score ?? null,
-      last_practiced_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,scope_type,scope_key" }
-  );
+  const row: Record<string, unknown> = {
+    user_id: userId,
+    scope_type: scopeType,
+    scope_key: scopeKey,
+    correct_count: (existing?.correct_count ?? 0) + patch.correctDelta,
+    attempt_count: (existing?.attempt_count ?? 0) + patch.attemptDelta,
+    best_test_score:
+      patch.bestTestScore !== undefined
+        ? Math.max(existing?.best_test_score ?? 0, patch.bestTestScore)
+        : existing?.best_test_score ?? null,
+    last_practiced_at: new Date().toISOString(),
+  };
+
+  let testResult: TestOutcome | null = null;
+  if (patch.testOutcome) {
+    const { correct, total } = patch.testOutcome;
+    const passed = total > 0 && correct / total >= TEST_PASS_THRESHOLD;
+    const intervalDays = nextTestInterval(existing?.interval_days ?? 0, passed);
+    row.interval_days = intervalDays;
+    row.next_due_at = new Date(Date.now() + intervalDays * 24 * 60 * 60 * 1000).toISOString();
+    row.last_test_score = total > 0 ? correct / total : 0;
+    testResult = { passed, intervalDays, tier: masteryTierFromInterval(intervalDays) };
+  }
+
+  const { error } = await supabase.from("grammar_progress").upsert(row, { onConflict: "user_id,scope_type,scope_key" });
   if (error) throw error;
+  return testResult;
 }
 
 export async function recordTopicAttempt(userId: string, topicSlug: string, correct: boolean) {
@@ -548,13 +605,21 @@ export function tenseGroupScopeKey(groupKey: TenseGroupKey, language: Language):
 }
 
 /** Verbos "Test" mode only — practice mode never calls this, so drilling freely doesn't move the progress ring. */
-export async function recordTenseTestResult(userId: string, tense: string, correct: number, total: number, language: Language = "es") {
-  await upsertProgress(userId, "tense", tenseScopeKey(tense, language), {
+export async function recordTenseTestResult(
+  userId: string,
+  tense: string,
+  correct: number,
+  total: number,
+  language: Language = "es"
+): Promise<TestOutcome | null> {
+  const result = await upsertProgress(userId, "tense", tenseScopeKey(tense, language), {
     correctDelta: correct,
     attemptDelta: total,
     bestTestScore: total > 0 ? correct / total : 0,
+    testOutcome: { correct, total },
   });
   await logReviewEvent(userId, "tense_test");
+  return result;
 }
 
 /** Verbos "Test" mode for a tense group ("all past tenses", etc.) — its own scope, separate from any single member tense's progress. */
@@ -564,31 +629,37 @@ export async function recordTenseGroupTestResult(
   correct: number,
   total: number,
   language: Language = "es"
-) {
-  await upsertProgress(userId, "tense_group", tenseGroupScopeKey(groupKey, language), {
+): Promise<TestOutcome | null> {
+  const result = await upsertProgress(userId, "tense_group", tenseGroupScopeKey(groupKey, language), {
     correctDelta: correct,
     attemptDelta: total,
     bestTestScore: total > 0 ? correct / total : 0,
+    testOutcome: { correct, total },
   });
   await logReviewEvent(userId, "tense_group_test");
+  return result;
 }
 
 /** Gramática "Test" mode for a single topic — separate from Practice's per-question recordTopicAttempt, this is what moves best_test_score. */
-export async function recordTopicTestResult(userId: string, topicSlug: string, correct: number, total: number) {
-  await upsertProgress(userId, "topic", topicSlug, {
+export async function recordTopicTestResult(userId: string, topicSlug: string, correct: number, total: number): Promise<TestOutcome | null> {
+  const result = await upsertProgress(userId, "topic", topicSlug, {
     correctDelta: correct,
     attemptDelta: total,
     bestTestScore: total > 0 ? correct / total : 0,
+    testOutcome: { correct, total },
   });
   await logReviewEvent(userId, "topic_test");
+  return result;
 }
 
 /** The combined, all-topics Gramática test — its own scope ("combined"/"all"), separate from any single topic's progress. */
-export async function recordCombinedTestResult(userId: string, correct: number, total: number) {
-  await upsertProgress(userId, "combined", "all", {
+export async function recordCombinedTestResult(userId: string, correct: number, total: number): Promise<TestOutcome | null> {
+  const result = await upsertProgress(userId, "combined", "all", {
     correctDelta: correct,
     attemptDelta: total,
     bestTestScore: total > 0 ? correct / total : 0,
+    testOutcome: { correct, total },
   });
   await logReviewEvent(userId, "combined_test");
+  return result;
 }

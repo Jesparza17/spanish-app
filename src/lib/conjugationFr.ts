@@ -68,6 +68,19 @@ export const TENSE_CEFR_LEVELS_FR: Record<TenseFr, CefrLevel> = {
   imperatif: "A2",
 };
 
+// See conjugation.ts's TENSE_DIFFICULTY for the rationale. passe_compose
+// carries auxiliary choice (avoir/être) and participle agreement on top of
+// being compound, so it's weighted above imparfait despite the same CEFR level.
+export const TENSE_DIFFICULTY_FR: Record<TenseFr, number> = {
+  present: 1,
+  passe_compose: 1.2,
+  imparfait: 1.1,
+  futur_simple: 1,
+  conditionnel_present: 1,
+  subjonctif_present: 1.75,
+  imperatif: 1.15,
+};
+
 // See conjugation.ts's TENSE_GROUPS for the rationale — imperatif excluded.
 // passe_compose is French's only compound tense, so it fills both the
 // "past" slot (alongside imparfait) and the "perfect" slot on its own.

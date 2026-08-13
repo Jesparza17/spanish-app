@@ -4,17 +4,20 @@ import { useEffect, useMemo, useState } from "react";
 import AuthGate from "@/components/AuthGate";
 import SpeakButton from "@/components/SpeakButton";
 import { fetchAllVocab, fetchAllVerbs } from "@/lib/glossary";
+import { ALGORITHMS_DOC } from "@/lib/algorithmsDoc";
+import { renderMiniMarkdown } from "@/lib/miniMarkdown";
 import { useLanguage } from "@/lib/language";
 import type { VocabItem, Verb } from "@/lib/types";
 
-const KINDS: { value: "vocab" | "verbs"; label: string }[] = [
+const KINDS: { value: "vocab" | "verbs" | "algorithms"; label: string }[] = [
   { value: "vocab", label: "Vocab" },
   { value: "verbs", label: "Verbos" },
+  { value: "algorithms", label: "How it works" },
 ];
 
 function GlossaryHome() {
   const { language } = useLanguage();
-  const [kind, setKind] = useState<"vocab" | "verbs">("vocab");
+  const [kind, setKind] = useState<"vocab" | "verbs" | "algorithms">("vocab");
   const [vocab, setVocab] = useState<VocabItem[]>([]);
   const [verbs, setVerbs] = useState<Verb[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,21 +72,29 @@ function GlossaryHome() {
           ))}
         </div>
 
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={kind === "vocab" ? "Buscar palabra o traducción…" : "Buscar verbo o traducción…"}
-          className="w-full rounded-xl border border-line bg-card px-4 py-2.5 font-sans text-sm text-ink shadow-card mb-2"
-        />
+        {kind !== "algorithms" && (
+          <>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={kind === "vocab" ? "Buscar palabra o traducción…" : "Buscar verbo o traducción…"}
+              className="w-full rounded-xl border border-line bg-card px-4 py-2.5 font-sans text-sm text-ink shadow-card mb-2"
+            />
 
-        {!loading && (
-          <p className="font-sans text-xs text-ink/40 mb-4">
-            {activeCount} de {totalCount}
-          </p>
+            {!loading && (
+              <p className="font-sans text-xs text-ink/40 mb-4">
+                {activeCount} de {totalCount}
+              </p>
+            )}
+          </>
         )}
 
-        {loading ? (
+        {kind === "algorithms" ? (
+          <div className="rounded-2xl bg-card shadow-card px-6 py-6 font-sans text-sm text-ink/75 leading-relaxed space-y-4">
+            {renderMiniMarkdown(ALGORITHMS_DOC)}
+          </div>
+        ) : loading ? (
           <p className="font-sans text-sm text-ink/50">Loading…</p>
         ) : kind === "vocab" ? (
           <div className="flex flex-col gap-2">

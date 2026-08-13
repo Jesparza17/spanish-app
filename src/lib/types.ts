@@ -79,4 +79,8 @@ export interface GrammarProgress {
   attemptCount: number;
   bestTestScore: number | null;
   lastPracticedAt: string | null;
+  /** Retest-scheduling fields — only meaningful for rows a graded test has updated. */
+  intervalDays: number;
+  nextDueAt: string | null;
+  lastTestScore: number | null;
 }

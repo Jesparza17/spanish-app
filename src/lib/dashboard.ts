@@ -1,8 +1,8 @@
 import { supabase } from "./supabaseClient";
-import { fetchGrammarProgress, fetchGrammarTopics } from "./grammarQueue";
-import { CORE_TENSES } from "./conjugation";
-import { CORE_TENSES_PT } from "./conjugationPt";
-import { CORE_TENSES_FR } from "./conjugationFr";
+import { fetchGrammarProgress, fetchGrammarTopics, masteryTierFromInterval, tenseScopeKey } from "./grammarQueue";
+import { CORE_TENSES, TENSE_CEFR_LEVELS, TENSE_DIFFICULTY } from "./conjugation";
+import { CORE_TENSES_PT, TENSE_CEFR_LEVELS_PT, TENSE_DIFFICULTY_PT } from "./conjugationPt";
+import { CORE_TENSES_FR, TENSE_CEFR_LEVELS_FR, TENSE_DIFFICULTY_FR } from "./conjugationFr";
 import type { Language } from "./language";
 import type { CefrLevel, GrammarProgress, GrammarTopic } from "./types";
 
@@ -22,12 +22,16 @@ export interface GrammarStats {
   topicsTotal: number;
   topicsPracticed: number;
   averageAccuracyPct: number | null;
+  /** Topic/combined tests whose retest interval has elapsed (next_due_at <= now). */
+  testsDue: number;
 }
 
 export interface VerbosStats {
   tensesTotal: number;
   tensesTested: number;
   averageBestScorePct: number | null;
+  /** Tense/tense-group tests whose retest interval has elapsed (next_due_at <= now). */
+  testsDue: number;
 }
 
 export interface CefrStats {
@@ -210,6 +214,10 @@ function computeCefrStats(totalByLevel: Record<CefrLevel, number>, knownByLevel:
   };
 }
 
+function isTestDue(p: GrammarProgress, now: Date): boolean {
+  return p.nextDueAt !== null && new Date(p.nextDueAt) <= now;
+}
+
 function computeGrammarStats(topics: GrammarTopic[], progress: GrammarProgress[]): GrammarStats {
   // grammar_progress has no language column — scope_key for topics is the
   // topic slug, so cross-reference against this language's own topic list
@@ -220,10 +228,15 @@ function computeGrammarStats(topics: GrammarTopic[], progress: GrammarProgress[]
   const avg = topicProgress.length
     ? topicProgress.reduce((sum, p) => sum + p.correctCount / p.attemptCount, 0) / topicProgress.length
     : null;
+  const now = new Date();
+  const testsDue = progress.filter(
+    (p) => ((p.scopeType === "topic" && topicSlugs.has(p.scopeKey)) || p.scopeType === "combined") && isTestDue(p, now)
+  ).length;
   return {
     topicsTotal: topics.length,
     topicsPracticed: topicProgress.length,
     averageAccuracyPct: avg !== null ? Math.round(avg * 100) : null,
+    testsDue,
   };
 }
 
@@ -243,11 +256,73 @@ function computeVerbosStats(progress: GrammarProgress[], language: Language): Ve
   const avg = tenseProgress.length
     ? tenseProgress.reduce((sum, p) => sum + (p.bestTestScore ?? 0), 0) / tenseProgress.length
     : null;
+  const now = new Date();
+  const testsDue = progress.filter(
+    (p) => (p.scopeType === "tense" || p.scopeType === "tense_group") && scopeKeyBelongsToLanguage(p.scopeKey, language) && isTestDue(p, now)
+  ).length;
   return {
     tensesTotal: language === "pt" ? CORE_TENSES_PT.length : language === "fr" ? CORE_TENSES_FR.length : CORE_TENSES.length,
     tensesTested: tenseProgress.length,
     averageBestScorePct: avg !== null ? Math.round(avg * 100) : null,
+    testsDue,
   };
+}
+
+// How much each grammar topic category contributes to CEFR coverage, same
+// idea as TENSE_DIFFICULTY (conjugation.ts) applied to topics — subjunctive
+// mood and the classic ser/estar-style "verb usage" distinctions are the
+// hard points for English speakers, so mastering one of those counts for
+// more than mastering a basics/intro topic at the same CEFR level.
+const TOPIC_CATEGORY_DIFFICULTY: Record<string, number> = {
+  introduction: 0.75,
+  fundamentals: 1,
+  pronouns: 1.25,
+  verb_usage: 1.25,
+  mood: 1.75,
+};
+function topicDifficultyWeight(category: string): number {
+  return TOPIC_CATEGORY_DIFFICULTY[category] ?? 1;
+}
+
+// CEFR blending: a level's coverage now also requires its grammar topics and
+// verb tenses to have reached at least "silver" mastery (bronze = passed
+// once, not enough — mirrors vocab's "retained twice" bar), not just
+// vocab/verb SRS retention. Pure computation over data already fetched for
+// computeGrammarStats/computeVerbosStats — no new query. Combined tests and
+// tense groups are excluded: they span multiple CEFR levels, so there's no
+// single level to attribute them to. Each topic/tense contributes a
+// difficulty-weighted amount rather than a flat 1, so harder grammar moves
+// the needle more than easier grammar at the same level.
+function computeGrammarMasteryByLevel(
+  topics: GrammarTopic[],
+  progress: GrammarProgress[],
+  language: Language
+): { totalByLevel: Record<CefrLevel, number>; knownByLevel: Record<CefrLevel, number> } {
+  const totalByLevel: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
+  const knownByLevel: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
+
+  const progressByScope = new Map<string, GrammarProgress>();
+  for (const p of progress) progressByScope.set(`${p.scopeType}:${p.scopeKey}`, p);
+
+  function countIt(level: CefrLevel, scopeType: "topic" | "tense", scopeKey: string, weight: number) {
+    totalByLevel[level] += weight;
+    const row = progressByScope.get(`${scopeType}:${scopeKey}`);
+    const tier = masteryTierFromInterval(row?.intervalDays ?? 0);
+    if (tier === "silver" || tier === "gold") knownByLevel[level] += weight;
+  }
+
+  for (const topic of topics) countIt(topic.cefrLevel, "topic", topic.slug, topicDifficultyWeight(topic.category));
+
+  const tenses = language === "pt" ? CORE_TENSES_PT : language === "fr" ? CORE_TENSES_FR : CORE_TENSES;
+  const tenseCefr: Record<string, CefrLevel> = language === "pt" ? TENSE_CEFR_LEVELS_PT : language === "fr" ? TENSE_CEFR_LEVELS_FR : TENSE_CEFR_LEVELS;
+  const tenseDifficulty: Record<string, number> =
+    language === "pt" ? TENSE_DIFFICULTY_PT : language === "fr" ? TENSE_DIFFICULTY_FR : TENSE_DIFFICULTY;
+  for (const tense of tenses) {
+    const level = tenseCefr[tense];
+    if (level) countIt(level, "tense", tenseScopeKey(tense, language), tenseDifficulty[tense] ?? 1);
+  }
+
+  return { totalByLevel, knownByLevel };
 }
 
 function dateKey(d: Date): string {
@@ -320,11 +395,20 @@ export async function fetchDashboardStats(userId: string, language: Language = "
     fetchActivityStats(userId),
     fetchMasteryBuckets(userId, language),
   ]);
+
+  const grammarMastery = computeGrammarMasteryByLevel(topics, progress, language);
+  const combinedTotalByLevel: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
+  const combinedKnownByLevel: Record<CefrLevel, number> = { ...EMPTY_LEVEL_COUNTS };
+  for (const level of LEVEL_ORDER) {
+    combinedTotalByLevel[level] = levelTotals[level] + grammarMastery.totalByLevel[level];
+    combinedKnownByLevel[level] = vocabVerbs.knownByLevel[level] + grammarMastery.knownByLevel[level];
+  }
+
   return {
     vocabVerbs,
     grammar: computeGrammarStats(topics, progress),
     verbos: computeVerbosStats(progress, language),
-    cefr: computeCefrStats(levelTotals, vocabVerbs.knownByLevel),
+    cefr: computeCefrStats(combinedTotalByLevel, combinedKnownByLevel),
     activity,
     masteryBuckets,
   };

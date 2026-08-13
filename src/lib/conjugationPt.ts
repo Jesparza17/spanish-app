@@ -70,6 +70,18 @@ export const TENSE_CEFR_LEVELS_PT: Record<TensePt, CefrLevel> = {
   preterito_perfeito_composto: "B1",
 };
 
+// See conjugation.ts's TENSE_DIFFICULTY for the rationale.
+export const TENSE_DIFFICULTY_PT: Record<TensePt, number> = {
+  presente: 1,
+  preterito_perfeito: 1.1,
+  imperfeito: 1.1,
+  futuro_do_presente: 1,
+  futuro_do_preterito: 1,
+  presente_do_subjuntivo: 1.75,
+  imperativo: 1.15,
+  preterito_perfeito_composto: 1.25,
+};
+
 // See conjugation.ts's TENSE_GROUPS for the rationale — imperativo excluded.
 export type TenseGroupKey = "present" | "past" | "subjunctive" | "perfect" | "all";
 

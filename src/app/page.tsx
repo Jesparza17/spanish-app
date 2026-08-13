@@ -182,6 +182,11 @@ function Dashboard({ user }: { user: User }) {
                   ? `${stats.grammar.averageAccuracyPct}% de precisión promedio`
                   : "Aún no hay práctica"}
               </p>
+              {stats.grammar.testsDue > 0 && (
+                <span className="inline-block mt-2 font-sans text-xs font-medium text-marigold-dark bg-marigold-light rounded-full px-2.5 py-1">
+                  {stats.grammar.testsDue} test{stats.grammar.testsDue === 1 ? "" : "s"} ready for retest
+                </span>
+              )}
             </Link>
 
             <Link
@@ -199,6 +204,11 @@ function Dashboard({ user }: { user: User }) {
                   ? `${stats.verbos.averageBestScorePct}% mejor puntaje promedio`
                   : "Aún no hay exámenes"}
               </p>
+              {stats.verbos.testsDue > 0 && (
+                <span className="inline-block mt-2 font-sans text-xs font-medium text-marigold-dark bg-marigold-light rounded-full px-2.5 py-1">
+                  {stats.verbos.testsDue} test{stats.verbos.testsDue === 1 ? "" : "s"} ready for retest
+                </span>
+              )}
             </Link>
           </>
         )}

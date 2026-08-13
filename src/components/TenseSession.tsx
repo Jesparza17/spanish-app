@@ -3,19 +3,24 @@
 import { useCallback, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import ExerciseCard, { type ExerciseResult } from "@/components/ExerciseCard";
+import MasteryTierBadge from "@/components/MasteryTierBadge";
 import {
   buildTenseQuestions,
   isCorrectAnswer,
   recordTenseTestResult,
   recordTenseGroupTestResult,
+  TEST_PASS_THRESHOLD,
   type TenseQuestion,
+  type TestOutcome,
   type VerbCategory,
 } from "@/lib/grammarQueue";
+import { useTestRunner } from "@/lib/useTestRunner";
 import { buildFillBlankPrompt, getTemplateGloss } from "@/lib/fillBlankTemplates";
 import type { TenseGroupKey } from "@/lib/conjugation";
 import { useLanguage } from "@/lib/language";
 
 const TEST_LENGTH = 12;
+const PRACTICE_COUNTS = [10, 20, 30] as const;
 
 const CATEGORIES: { value: VerbCategory; label: string }[] = [
   { value: "regular", label: "Regulars" },
@@ -45,84 +50,85 @@ export default function TenseSession({
   const { language } = useLanguage();
   const [mode, setMode] = useState<Mode>("practice");
   const [category, setCategory] = useState<VerbCategory>("mix");
-  const [questions, setQuestions] = useState<TenseQuestion[]>([]);
-  const [index, setIndex] = useState(0);
-  const [correctCount, setCorrectCount] = useState(0);
+  const [practiceCount, setPracticeCount] = useState<"free" | number>("free");
   const [loading, setLoading] = useState(true);
-  const [finished, setFinished] = useState(false);
+  const [outcome, setOutcome] = useState<TestOutcome | null>(null);
   const [showGloss, setShowGloss] = useState(false);
+
+  // Free practice/fill-blank — a single continuously-redrawn question, not a graded round.
+  const [freeQuestion, setFreeQuestion] = useState<TenseQuestion | undefined>(undefined);
+
+  const runner = useTestRunner<TenseQuestion>((correct, total) => {
+    if (mode !== "test") return;
+    setOutcome(null);
+    const record = groupKey
+      ? recordTenseGroupTestResult(user.id, groupKey, correct, total, language)
+      : recordTenseTestResult(user.id, tenses[0], correct, total, language);
+    record.then(setOutcome);
+  });
 
   const tenseArg = tenses.length === 1 ? tenses[0] : tenses;
 
   useEffect(() => {
     setShowGloss(false);
-  }, [index, mode]);
+  }, [freeQuestion, runner.current, mode]);
 
   const startDrill = useCallback(
-    async (nextMode: "practice" | "fillBlank", cat: VerbCategory = category) => {
+    async (nextMode: "practice" | "fillBlank", cat: VerbCategory = category, count: "free" | number = practiceCount) => {
       setLoading(true);
       setMode(nextMode);
       setCategory(cat);
-      setFinished(false);
-      setIndex(0);
-      setCorrectCount(0);
-      setQuestions(await buildTenseQuestions(tenseArg, 1, cat, language));
+      setPracticeCount(count);
+      if (count === "free") {
+        const qs = await buildTenseQuestions(tenseArg, 1, cat, language);
+        setFreeQuestion(qs[0]);
+      } else {
+        runner.start(await buildTenseQuestions(tenseArg, count, cat, language));
+      }
       setLoading(false);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tenses.join(","), category, language]
+    [tenses.join(","), category, practiceCount, language]
   );
 
   const startTest = useCallback(async () => {
     setLoading(true);
     setMode("test");
-    setFinished(false);
-    setIndex(0);
-    setCorrectCount(0);
-    setQuestions(await buildTenseQuestions(tenseArg, TEST_LENGTH, "mix", language));
+    setOutcome(null);
+    runner.start(await buildTenseQuestions(tenseArg, TEST_LENGTH, "mix", language));
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenses.join(","), language]);
 
   useEffect(() => {
-    startDrill("practice");
+    startDrill("practice", "mix", "free");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenses.join(","), language]);
 
-  async function handleNextDrill() {
+  async function handleFreeNext() {
     setLoading(true);
-    setQuestions(await buildTenseQuestions(tenseArg, 1, category, language));
-    setIndex(0);
+    const qs = await buildTenseQuestions(tenseArg, 1, category, language);
+    setFreeQuestion(qs[0]);
     setLoading(false);
   }
 
-  async function handleNextTest(wasCorrect: boolean) {
-    const newCorrect = correctCount + (wasCorrect ? 1 : 0);
-    setCorrectCount(newCorrect);
-    if (index + 1 >= questions.length) {
-      if (groupKey) {
-        await recordTenseGroupTestResult(user.id, groupKey, newCorrect, questions.length, language);
-      } else {
-        await recordTenseTestResult(user.id, tenses[0], newCorrect, questions.length, language);
-      }
-      setFinished(true);
+  function handleAnswered(result: ExerciseResult, question: TenseQuestion) {
+    if (mode !== "test" && practiceCount === "free") {
+      handleFreeNext();
     } else {
-      setIndex((i) => i + 1);
+      runner.submit(result.correct, question);
     }
   }
 
-  function handleNext(result: ExerciseResult) {
-    if (mode === "test") handleNextTest(result.correct);
-    else handleNextDrill();
-  }
-
-  const current = questions[index];
+  const isFree = mode !== "test" && practiceCount === "free";
+  const current = isFree ? freeQuestion : runner.current;
   const questionTense = current?.tense ?? tenses[0];
   const displayPrompt =
     current && mode === "fillBlank"
       ? buildFillBlankPrompt(language, questionTense, current.person, current.infinitive, current.polarity)
       : current?.prompt;
   const templateGloss = mode === "fillBlank" ? getTemplateGloss(language, questionTense) : null;
+  const passed = mode === "test" && runner.firstRoundTotal > 0 && runner.firstRoundCorrect / runner.firstRoundTotal >= TEST_PASS_THRESHOLD;
 
   return (
     <main>
@@ -162,59 +168,115 @@ export default function TenseSession({
         </div>
 
         {(mode === "practice" || mode === "fillBlank") && (
-          <div className="flex gap-2">
-            {CATEGORIES.map((c) => (
+          <>
+            <div className="flex gap-2">
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => startDrill(mode, c.value)}
+                  className={`flex-1 rounded-full px-3 py-1.5 font-sans text-xs font-medium transition-colors ${
+                    category === c.value ? "bg-marigold text-white" : "bg-card text-ink/55 shadow-card"
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
               <button
-                key={c.value}
-                onClick={() => startDrill(mode, c.value)}
-                className={`flex-1 rounded-full px-3 py-1.5 font-sans text-xs font-medium transition-colors ${
-                  category === c.value ? "bg-marigold text-white" : "bg-card text-ink/55 shadow-card"
+                onClick={() => startDrill(mode, category, "free")}
+                className={`shrink-0 rounded-full px-3.5 py-1.5 font-sans text-xs font-medium transition-colors ${
+                  practiceCount === "free" ? "bg-ink text-white" : "bg-card text-ink/55 shadow-card"
                 }`}
               >
-                {c.label}
+                Free
               </button>
-            ))}
-          </div>
+              {PRACTICE_COUNTS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => startDrill(mode, category, c)}
+                  className={`shrink-0 rounded-full px-3.5 py-1.5 font-sans text-xs font-medium transition-colors ${
+                    practiceCount === c ? "bg-ink text-white" : "bg-card text-ink/55 shadow-card"
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </>
         )}
 
-        {mode === "test" && !finished && questions.length > 0 && !loading && (
+        {!isFree && !loading && runner.phase === "active" && runner.roundLength > 0 && (
           <p className="font-sans text-xs text-ink/45 text-center">
-            {Math.min(index + 1, questions.length)} / {questions.length}
+            {runner.isReview ? "Reviewing missed · " : ""}
+            {Math.min(runner.index + 1, runner.roundLength)} / {runner.roundLength}
           </p>
         )}
 
         {loading ? (
           <p className="font-sans text-sm text-ink/50 text-center">Loading…</p>
-        ) : questions.length === 0 ? (
+        ) : !current && (isFree || runner.roundLength === 0) ? (
           <div className="rounded-2xl bg-card shadow-card px-6 py-10 text-center">
             <p className="font-sans text-sm text-ink/60">
               No verbs available yet — run <code>npm run generate:verbs</code> first.
             </p>
           </div>
-        ) : finished ? (
+        ) : !isFree && runner.phase === "results" ? (
           <div className="rounded-2xl bg-card shadow-floating px-6 py-10 text-center">
-            <p className="font-display text-2xl text-ink mb-1">
-              {correctCount}/{questions.length}
-            </p>
-            <p className="font-sans text-sm text-ink/60 mb-6">correct</p>
-            <button
-              onClick={startTest}
-              className="rounded-full bg-marigold text-white px-6 py-3 font-sans text-sm font-medium active:scale-[0.97] transition-transform"
-            >
-              Retake test
-            </button>
+            {runner.isReview ? (
+              <>
+                <p className="font-display text-2xl text-ink mb-1">
+                  {runner.roundCorrect}/{runner.roundLength}
+                </p>
+                <p className="font-sans text-sm text-ink/60 mb-6">correct this round</p>
+              </>
+            ) : (
+              <>
+                <p className="font-display text-2xl text-ink mb-1">
+                  {runner.firstRoundCorrect}/{runner.firstRoundTotal}
+                </p>
+                <div className="flex items-center justify-center gap-2 mb-6">
+                  <p className="font-sans text-sm text-ink/60">{mode === "test" ? (passed ? "¡Aprobado!" : "No aprobado") : "correct"}</p>
+                  {mode === "test" && outcome && <MasteryTierBadge tier={outcome.tier} />}
+                </div>
+              </>
+            )}
+
+            {runner.roundWrongCount > 0 ? (
+              <div className="flex gap-2 justify-center">
+                <button
+                  onClick={runner.reviewMissed}
+                  className="rounded-full bg-marigold text-white px-6 py-3 font-sans text-sm font-medium active:scale-[0.97] transition-transform"
+                >
+                  Review {runner.roundWrongCount} missed
+                </button>
+                <button
+                  onClick={runner.finishNow}
+                  className="rounded-full bg-ink/8 text-ink/60 px-6 py-3 font-sans text-sm font-medium active:scale-[0.97] transition-transform"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => (mode === "test" ? startTest() : startDrill(mode, category, practiceCount))}
+                className="rounded-full bg-marigold text-white px-6 py-3 font-sans text-sm font-medium active:scale-[0.97] transition-transform"
+              >
+                {mode === "test" ? "Retake test" : "Practice again"}
+              </button>
+            )}
           </div>
         ) : current ? (
           <>
             <ExerciseCard
-              key={`${mode}-${index}-${current.verbId}-${current.prompt}`}
+              key={`${isFree ? "free" : runner.isReview ? "r" : "f"}-${isFree ? "" : runner.index}-${current.verbId}-${current.prompt}`}
               prompt={displayPrompt!}
               translation={current.translation}
               onGrade={async (answer) => {
                 const correct = isCorrectAnswer(answer, [current.answer]);
                 return { correct, correctAnswer: current.answer, explanation: null };
               }}
-              onNext={handleNext}
+              onNext={(result) => handleAnswered(result, current)}
             />
             {mode === "fillBlank" && templateGloss && (
               <div className="text-center">

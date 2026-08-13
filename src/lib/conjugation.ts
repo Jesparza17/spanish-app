@@ -75,6 +75,25 @@ export const TENSE_CEFR_LEVELS: Record<Tense, CefrLevel> = {
   pluscuamperfecto_subjuntivo: "C1",
 };
 
+// Relative grammatical difficulty for an English-speaking learner — used to
+// weight each tense's contribution to CEFR coverage (src/lib/dashboard.ts),
+// so mastering a hard tense counts for more than mastering an easy one at
+// the same CEFR level. 1.0 = baseline. Subjunctive mood is the classic hard
+// point in Spanish for English speakers, hence the largest weights there;
+// preterite/imperfect aspect distinction is the second classic hard point.
+export const TENSE_DIFFICULTY: Record<Tense, number> = {
+  presente: 1,
+  preterito: 1.1,
+  imperfecto: 1.1,
+  futuro: 1,
+  condicional: 1,
+  presente_perfecto: 1.25,
+  presente_subjuntivo: 1.75,
+  imperativo: 1.15,
+  imperfecto_subjuntivo: 1.75,
+  pluscuamperfecto_subjuntivo: 1.9,
+};
+
 // Broader groupings for practice/test — imperativo is deliberately excluded
 // from every group (it has its own person set/polarity, handled entirely
 // separately in grammarQueue.ts).
