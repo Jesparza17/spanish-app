@@ -35,6 +35,26 @@ textbook-stilted, not machine-translated-sounding. Concretely:
   building small throwaway spot-check scripts before wiring new engine
   code into the UI — keep doing that.
 
+**Hard rule: nothing gets inserted into the live database without 100%
+confidence in its correctness. No exceptions, no "probably right," no
+"reviewed by eye but not cross-checked."** This applies to every table a
+learner can see or be graded against — `vocab_items`, `verbs`,
+`grammar_topics`, `grammar_exercises`, gender/theme data, all of it.
+Concretely:
+- If a batch's verification isn't complete (live-conjugator check for any
+  conjugated form, dictionary cross-check for gender/translations, or
+  equivalent), **do not insert it yet** — hold it as a draft (scratchpad
+  or a local file) until verification is actually done, however long that
+  takes.
+- "Reviewed for naturalness by reading it back" is necessary but **not
+  sufficient** on its own for anything with a graded answer or a claimed
+  grammatical fact (conjugation, gender, accepted answers) — pair it with
+  the live-conjugator/dictionary check every time, not just when something
+  feels uncertain.
+- A smaller, fully-verified batch always beats a larger batch with any
+  unverified content in it. Shipping less is always an acceptable outcome;
+  shipping something wrong is not.
+
 ## Tech stack
 
 - **Next.js 14** (App Router), **TypeScript**, **Tailwind CSS**, deployed
@@ -164,6 +184,22 @@ Two ways content gets into `vocab_items`/`verbs`/`grammar_exercises`:
    matters most," above) always happens on the good model, only the bulk
    generation step moves to Haiku. Don't skip the review pass just
    because a subagent drafted it.
+
+   **Ground word/verb selection against a real external source before
+   drafting, don't ask a model to freely generate "N more not already in
+   this list."** That prompt pattern — recall words from memory while
+   avoiding an ever-growing exclusion list — is exactly what produced a
+   batch of hallucinated non-existent French "verbs" (invented words,
+   English words, adjectives/nouns mislabeled as verbs) in one round.
+   Instead: pull a real published list (a frequency dictionary, Wiktionary
+   frequency lists, RAE, or any reputable "most common N Spanish/
+   Portuguese/French verbs" page) via `WebSearch`/`WebFetch`, diff it
+   against the live DB to find genuine gaps, and only draft enrichment
+   content (translation, example sentence, `verb_type`/part of speech,
+   CEFR level) for entries the source actually confirms exist. This makes
+   *existence* a looked-up fact instead of a generated one — it doesn't
+   replace verifying what gets drafted around a confirmed-real word (that
+   still needs the same live-conjugator/naturalness check as always).
 2. **Optional, API-billed pipeline** (`scripts/generate-content.ts`,
    `npm run generate:vocab|verbs|grammar`): calls the Anthropic API
    directly with your own key, 3 independent fresh-context critic passes,
@@ -187,20 +223,34 @@ not from guessed "common-sense" frequency. `reviewQueue.ts`'s
 
 ### Current content volume (rough — check DB for live counts)
 
-Target: **1000 verbs / 4000 vocab per language**, **125+ exercises per
+Target: **1000 verbs / 4000 vocab per language**, **200+ exercises per
 grammar topic** — an explicit, large, long-term goal being approached
 incrementally, batch by batch, across many conversations. Don't expect to
 finish it in one sitting; each round is ~50–90 new verbs or vocab words
 per language, hand-drafted and dedup-checked. As of the last count:
 
-| Language | Verbs | Vocab | Grammar topics |
-|---|---|---|---|
-| es | ~570 | ~1000 | 26 |
-| pt | ~210 | ~480 | 7 |
-| fr | ~225 | ~480 | 7 |
+| Language | Verbs | Vocab | Grammar topics | Grammar exercises |
+|---|---|---|---|---|
+| es | 569 | 1004 | 26 | 432 |
+| pt | 210 | 484 | 14 | 154 |
+| fr | 226 | 482 | 14 | 168 |
 
-Grammar exercises per topic are still well short of the 125+ target for
-most topics — that's the next big content push.
+Grammar exercises per topic are still well short of the 200+ target for
+every topic in every language — that's the ongoing content push.
+
+**Sequencing policy**: when asked for more verb/vocab/exercise content
+with no language specified, **prioritize Spanish** until it hits the
+1000/4000/200-per-topic targets — Spanish is the primary-focus language
+per this project's stated purpose, and finishing it first is more useful
+than spreading effort thin across all three. Once Spanish hits target,
+Portuguese and French get **equal** priority with each other.
+
+**This sequencing is always subordinate to the top rule of this file**
+(*correctness above velocity* — see the very first section). Never rush
+Spanish content to hit these numbers faster at the cost of verification
+rigor. A wrong answer shown to the learner is worse than a slower content
+round — if a batch can't clear the verification discipline below, ship
+less, not wrong.
 
 ## Language of explanations
 

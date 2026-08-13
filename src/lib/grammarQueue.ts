@@ -122,12 +122,16 @@ export interface TopicExercise {
 }
 
 export async function fetchTopicExercises(topicId: string, limit = 12): Promise<TopicExercise[]> {
+  // The fetch-side limit here is a ceiling on the candidate pool, not the
+  // returned count — must stay comfortably above the 200+/topic content
+  // target, or exercises inserted past whatever cap this is would never be
+  // selectable (silently never shown, regardless of the shuffle below).
   const { data, error } = await supabase
     .from("grammar_exercises")
     .select("id, prompt, accepted_answers, explanation")
     .eq("topic_id", topicId)
     .eq("verified", true)
-    .limit(200);
+    .limit(1000);
   if (error) throw error;
   const exercises = (data ?? []).map((row: any) => ({
     id: row.id,
@@ -146,7 +150,7 @@ export async function fetchCombinedTestExercises(language: Language = "es", limi
     .not("topic_id", "is", null)
     .eq("verified", true)
     .eq("grammar_topics.language", language)
-    .limit(500);
+    .limit(10000);
   if (error) throw error;
   const exercises = (data ?? []).map((row: any) => ({
     id: row.id,

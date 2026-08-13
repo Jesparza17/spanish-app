@@ -488,4 +488,107 @@ export const IRREGULAR_VERBS: Record<string, IrregularConjugation> = {
     preterito: { yo: "reñí", tu: "reñiste", usted: "riñó", nosotros: "reñimos", ustedes: "riñeron" },
     presente_subjuntivo: { yo: "riña", tu: "riñas", usted: "riña", nosotros: "riñamos", ustedes: "riñan" },
   },
+
+  // tener-compounds — same suffix pattern as tener, verified against conjugacion.es.
+  obtener: {
+    presente: { yo: "obtengo", tu: "obtienes", usted: "obtiene", nosotros: "obtenemos", ustedes: "obtienen" },
+    preterito: { yo: "obtuve", tu: "obtuviste", usted: "obtuvo", nosotros: "obtuvimos", ustedes: "obtuvieron" },
+    presente_subjuntivo: { yo: "obtenga", tu: "obtengas", usted: "obtenga", nosotros: "obtengamos", ustedes: "obtengan" },
+    futureStem: "obtendr",
+    imperativeTuAffirmative: "obtén",
+  },
+  detener: {
+    presente: { yo: "detengo", tu: "detienes", usted: "detiene", nosotros: "detenemos", ustedes: "detienen" },
+    preterito: { yo: "detuve", tu: "detuviste", usted: "detuvo", nosotros: "detuvimos", ustedes: "detuvieron" },
+    presente_subjuntivo: { yo: "detenga", tu: "detengas", usted: "detenga", nosotros: "detengamos", ustedes: "detengan" },
+    futureStem: "detendr",
+    imperativeTuAffirmative: "detén",
+  },
+  mantener: {
+    presente: { yo: "mantengo", tu: "mantienes", usted: "mantiene", nosotros: "mantenemos", ustedes: "mantienen" },
+    preterito: { yo: "mantuve", tu: "mantuviste", usted: "mantuvo", nosotros: "mantuvimos", ustedes: "mantuvieron" },
+    presente_subjuntivo: { yo: "mantenga", tu: "mantengas", usted: "mantenga", nosotros: "mantengamos", ustedes: "mantengan" },
+    futureStem: "mantendr",
+    imperativeTuAffirmative: "mantén",
+  },
+  // poner-compound — same pattern as poner, including the irregular past participle.
+  suponer: {
+    presente: { yo: "supongo", tu: "supones", usted: "supone", nosotros: "suponemos", ustedes: "suponen" },
+    preterito: { yo: "supuse", tu: "supusiste", usted: "supuso", nosotros: "supusimos", ustedes: "supusieron" },
+    presente_subjuntivo: { yo: "suponga", tu: "supongas", usted: "suponga", nosotros: "supongamos", ustedes: "supongan" },
+    futureStem: "supondr",
+    pastParticiple: "supuesto",
+    imperativeTuAffirmative: "supón",
+  },
+
+  // o -> ue stem change (presente + presente_subjuntivo only, like volver/pensar).
+  contar: {
+    presente: { yo: "cuento", tu: "cuentas", usted: "cuenta", nosotros: "contamos", ustedes: "cuentan" },
+    presente_subjuntivo: { yo: "cuente", tu: "cuentes", usted: "cuente", nosotros: "contemos", ustedes: "cuenten" },
+  },
+  mostrar: {
+    presente: { yo: "muestro", tu: "muestras", usted: "muestra", nosotros: "mostramos", ustedes: "muestran" },
+    presente_subjuntivo: { yo: "muestre", tu: "muestres", usted: "muestre", nosotros: "mostremos", ustedes: "muestren" },
+  },
+  probar: {
+    presente: { yo: "pruebo", tu: "pruebas", usted: "prueba", nosotros: "probamos", ustedes: "prueban" },
+    presente_subjuntivo: { yo: "pruebe", tu: "pruebes", usted: "pruebe", nosotros: "probemos", ustedes: "prueben" },
+  },
+  mover: {
+    presente: { yo: "muevo", tu: "mueves", usted: "mueve", nosotros: "movemos", ustedes: "mueven" },
+    presente_subjuntivo: { yo: "mueva", tu: "muevas", usted: "mueva", nosotros: "movamos", ustedes: "muevan" },
+  },
+
+  // -zco pattern (only the "yo" form and the whole subjunctive deviate, like conocer).
+  complacer: {
+    presente: { yo: "complazco", tu: "complaces", usted: "complace", nosotros: "complacemos", ustedes: "complacen" },
+    presente_subjuntivo: { yo: "complazca", tu: "complazcas", usted: "complazca", nosotros: "complazcamos", ustedes: "complazcan" },
+  },
+  nacer: {
+    presente: { yo: "nazco", tu: "naces", usted: "nace", nosotros: "nacemos", ustedes: "nacen" },
+    presente_subjuntivo: { yo: "nazca", tu: "nazcas", usted: "nazca", nosotros: "nazcamos", ustedes: "nazcan" },
+  },
+  aparecer: {
+    presente: { yo: "aparezco", tu: "apareces", usted: "aparece", nosotros: "aparecemos", ustedes: "aparecen" },
+    presente_subjuntivo: { yo: "aparezca", tu: "aparezcas", usted: "aparezca", nosotros: "aparezcamos", ustedes: "aparezcan" },
+  },
+  ofrecer: {
+    presente: { yo: "ofrezco", tu: "ofreces", usted: "ofrece", nosotros: "ofrecemos", ustedes: "ofrecen" },
+    presente_subjuntivo: { yo: "ofrezca", tu: "ofrezcas", usted: "ofrezca", nosotros: "ofrezcamos", ustedes: "ofrezcan" },
+  },
+  parecer: {
+    presente: { yo: "parezco", tu: "pareces", usted: "parece", nosotros: "parecemos", ustedes: "parecen" },
+    presente_subjuntivo: { yo: "parezca", tu: "parezcas", usted: "parezca", nosotros: "parezcamos", ustedes: "parezcan" },
+  },
+  reconocer: {
+    presente: { yo: "reconozco", tu: "reconoces", usted: "reconoce", nosotros: "reconocemos", ustedes: "reconocen" },
+    presente_subjuntivo: { yo: "reconozca", tu: "reconozcas", usted: "reconozca", nosotros: "reconozcamos", ustedes: "reconozcan" },
+  },
+  permanecer: {
+    presente: { yo: "permanezco", tu: "permaneces", usted: "permanece", nosotros: "permanecemos", ustedes: "permanecen" },
+    presente_subjuntivo: { yo: "permanezca", tu: "permanezcas", usted: "permanezca", nosotros: "permanezcamos", ustedes: "permanezcan" },
+  },
+
+  // accent-mark stem change (u -> ú when stressed) — verified against conjugacion.es.
+  reunir: {
+    presente: { yo: "reúno", tu: "reúnes", usted: "reúne", nosotros: "reunimos", ustedes: "reúnen" },
+    presente_subjuntivo: { yo: "reúna", tu: "reúnas", usted: "reúna", nosotros: "reunamos", ustedes: "reúnan" },
+  },
+  // g -> j spelling change before back vowels (o/a), verified against conjugacion.es.
+  dirigir: {
+    presente: { yo: "dirijo", tu: "diriges", usted: "dirige", nosotros: "dirigimos", ustedes: "dirigen" },
+    presente_subjuntivo: { yo: "dirija", tu: "dirijas", usted: "dirija", nosotros: "dirijamos", ustedes: "dirijan" },
+  },
+  // e -> ie stem change with preterito/subjuntivo-nosotros weakening to i (like sentir), verified against conjugacion.es.
+  convertir: {
+    presente: { yo: "convierto", tu: "conviertes", usted: "convierte", nosotros: "convertimos", ustedes: "convierten" },
+    preterito: { yo: "convertí", tu: "convertiste", usted: "convirtió", nosotros: "convertimos", ustedes: "convirtieron" },
+    presente_subjuntivo: { yo: "convierta", tu: "conviertas", usted: "convierta", nosotros: "convirtamos", ustedes: "conviertan" },
+  },
+  // e -> i stem change + gu -> g spelling before o/a (like pedir, plus the -guir spelling rule), verified against conjugacion.es.
+  conseguir: {
+    presente: { yo: "consigo", tu: "consigues", usted: "consigue", nosotros: "conseguimos", ustedes: "consiguen" },
+    preterito: { yo: "conseguí", tu: "conseguiste", usted: "consiguió", nosotros: "conseguimos", ustedes: "consiguieron" },
+    presente_subjuntivo: { yo: "consiga", tu: "consigas", usted: "consiga", nosotros: "consigamos", ustedes: "consigan" },
+  },
 };
