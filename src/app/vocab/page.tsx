@@ -7,7 +7,7 @@ import ReviewCard from "@/components/ReviewCard";
 import ThemeToggle from "@/components/ThemeToggle";
 import { supabase } from "@/lib/supabaseClient";
 import { fetchDueQueue, submitGrade } from "@/lib/reviewQueue";
-import { masterItem, nextReview } from "@/lib/srs";
+import { nextReview } from "@/lib/srs";
 import { useLanguage } from "@/lib/language";
 import type { ReviewCard as ReviewCardData, Theme, SrsRow } from "@/lib/types";
 
@@ -17,6 +17,18 @@ const ITEM_KINDS: { value: "both" | "vocab" | "verb"; label: string }[] = [
   { value: "verb", label: "Verbos" },
 ];
 
+const DIRECTION_STORAGE_KEY = "cuaderno-review-direction";
+
+// Verb frequency-range filter presets — steps of a single slider, all
+// anchored at rank 1 (most common). null = no filtering ("All").
+const FREQ_BANDS: { label: string; range: { min: number; max: number } | null }[] = [
+  { label: "All", range: null },
+  { label: "Top 50", range: { min: 1, max: 50 } },
+  { label: "Top 200", range: { min: 1, max: 200 } },
+  { label: "Top 500", range: { min: 1, max: 500 } },
+  { label: "Top 1000", range: { min: 1, max: 1000 } },
+];
+
 function ReviewSession({ user }: { user: User }) {
   const { language } = useLanguage();
   const [themes, setThemes] = useState<Theme[]>([]);
@@ -24,6 +36,19 @@ function ReviewSession({ user }: { user: User }) {
   const [itemKind, setItemKind] = useState<"both" | "vocab" | "verb">("both");
   const [queue, setQueue] = useState<ReviewCardData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reversed, setReversed] = useState(false);
+  const [freqBandIndex, setFreqBandIndex] = useState(0);
+  const freqBand = FREQ_BANDS[freqBandIndex];
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(DIRECTION_STORAGE_KEY);
+    if (stored === "reversed") setReversed(true);
+  }, []);
+
+  function handleSetReversed(next: boolean) {
+    setReversed(next);
+    window.localStorage.setItem(DIRECTION_STORAGE_KEY, next ? "reversed" : "forward");
+  }
 
   useEffect(() => {
     setSelectedThemeId(null); // theme IDs don't carry across languages
@@ -36,11 +61,15 @@ function ReviewSession({ user }: { user: User }) {
 
   useEffect(() => {
     setLoading(true);
-    const mode = selectedThemeId ? ({ type: "theme", themeId: selectedThemeId } as const) : ({ type: "frequency" } as const);
+    const mode = selectedThemeId
+      ? ({ type: "theme", themeId: selectedThemeId } as const)
+      : freqBand.range
+        ? ({ type: "frequencyRange", min: freqBand.range.min, max: freqBand.range.max } as const)
+        : ({ type: "frequency" } as const);
     fetchDueQueue(user.id, itemKind, mode, language)
       .then(setQueue)
       .finally(() => setLoading(false));
-  }, [user.id, selectedThemeId, itemKind, language]);
+  }, [user.id, selectedThemeId, itemKind, language, freqBand]);
 
   async function fetchSrsState(srsId: string) {
     const { data: row } = await supabase
@@ -59,19 +88,6 @@ function ReviewSession({ user }: { user: User }) {
     const state = await fetchSrsState(card.srsId);
     if (state) {
       const result = nextReview(state, grade);
-      await submitGrade(card.srsId, result.easeFactor, result.intervalDays, result.repetitions, result.dueAt, user.id);
-    }
-
-    setQueue((q) => q.slice(1));
-  }
-
-  async function handleMastered() {
-    const card = queue[0];
-    if (!card) return;
-
-    const state = await fetchSrsState(card.srsId);
-    if (state) {
-      const result = masterItem(state);
       await submitGrade(card.srsId, result.easeFactor, result.intervalDays, result.repetitions, result.dueAt, user.id);
     }
 
@@ -104,12 +120,49 @@ function ReviewSession({ user }: { user: User }) {
           ))}
         </div>
 
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => handleSetReversed(false)}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 font-sans text-xs font-medium transition-colors ${
+              !reversed ? "bg-ink text-white" : "bg-card text-ink/55 shadow-card"
+            }`}
+          >
+            Word → English
+          </button>
+          <button
+            onClick={() => handleSetReversed(true)}
+            className={`shrink-0 rounded-full px-3.5 py-1.5 font-sans text-xs font-medium transition-colors ${
+              reversed ? "bg-ink text-white" : "bg-card text-ink/55 shadow-card"
+            }`}
+          >
+            English → Word
+          </button>
+        </div>
+
+        {itemKind !== "vocab" && selectedThemeId === null && (
+          <div className="rounded-2xl bg-card shadow-card px-4 py-3 mb-6">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="font-sans text-xs text-ink/50">Verb frequency</p>
+              <p className="font-sans text-xs font-medium text-ink/70">{freqBand.label}</p>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={FREQ_BANDS.length - 1}
+              step={1}
+              value={freqBandIndex}
+              onChange={(e) => setFreqBandIndex(Number(e.target.value))}
+              className="w-full accent-marigold"
+            />
+          </div>
+        )}
+
         <ThemeToggle themes={themes} selectedThemeId={selectedThemeId} onSelect={setSelectedThemeId} />
 
         {loading ? (
           <p className="font-sans text-sm text-ink/50">Loading…</p>
         ) : queue.length > 0 ? (
-          <ReviewCard card={queue[0]} onGrade={handleGrade} onMastered={handleMastered} />
+          <ReviewCard card={queue[0]} onGrade={handleGrade} reversed={reversed} />
         ) : (
           <div className="rounded-2xl bg-card shadow-card px-6 py-10 text-center">
             <p className="font-sans text-sm text-ink/60">

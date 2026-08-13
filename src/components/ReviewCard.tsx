@@ -14,13 +14,16 @@ const GRADES = [
 export default function ReviewCard({
   card,
   onGrade,
-  onMastered,
+  reversed = false,
 }: {
   card: ReviewCardData;
   onGrade: (grade: number) => void;
-  onMastered: () => void;
+  reversed?: boolean;
 }) {
   const [revealed, setRevealed] = useState(false);
+
+  const promptText = reversed ? card.translation : card.front;
+  const answerText = reversed ? card.front : card.translation;
 
   return (
     <div className="rounded-2xl bg-card shadow-floating px-6 py-10 text-center">
@@ -31,13 +34,16 @@ export default function ReviewCard({
       </span>
 
       <div className="flex items-center justify-center gap-2 mb-1">
-        <p className="font-display text-4xl text-ink">{card.front}</p>
-        <SpeakButton text={card.front} />
+        <p className="font-display text-4xl text-ink">{promptText}</p>
+        {!reversed && <SpeakButton text={card.front} />}
       </div>
 
       {revealed ? (
         <div className="mt-7 space-y-5 animate-[fadeIn_0.15s_ease-out]">
-          <p className="font-sans text-lg text-ink/75">{card.translation}</p>
+          <div className="flex items-center justify-center gap-2">
+            <p className="font-sans text-lg text-ink/75">{answerText}</p>
+            {reversed && <SpeakButton text={card.front} />}
+          </div>
           <div className="border-t border-line pt-5">
             <div className="flex items-start justify-center gap-2">
               <p className="font-display italic text-[17px] text-ink/80 leading-snug">{card.example}</p>
@@ -60,16 +66,6 @@ export default function ReviewCard({
               </button>
             ))}
           </div>
-
-          <button
-            onClick={() => {
-              onMastered();
-              setRevealed(false);
-            }}
-            className="w-full pt-1 font-sans text-xs text-ink/40 underline decoration-dotted underline-offset-4 active:text-ink/60 transition-colors"
-          >
-            I know this 100% — show it rarely
-          </button>
         </div>
       ) : (
         <button

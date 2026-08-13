@@ -68,6 +68,27 @@ export const TENSE_CEFR_LEVELS_FR: Record<TenseFr, CefrLevel> = {
   imperatif: "A2",
 };
 
+// See conjugation.ts's TENSE_GROUPS for the rationale — imperatif excluded.
+// passe_compose is French's only compound tense, so it fills both the
+// "past" slot (alongside imparfait) and the "perfect" slot on its own.
+export type TenseGroupKey = "present" | "past" | "subjunctive" | "perfect" | "all";
+
+export const TENSE_GROUPS_FR: Record<TenseGroupKey, ConjugableTenseFr[]> = {
+  present: ["present"],
+  past: ["passe_compose", "imparfait"],
+  subjunctive: ["subjonctif_present"],
+  perfect: ["passe_compose"],
+  all: CORE_TENSES_FR.filter((t): t is ConjugableTenseFr => t !== "imperatif"),
+};
+
+export const TENSE_GROUP_LABELS_FR: Record<TenseGroupKey, string> = {
+  present: "All present tenses",
+  past: "All past tenses",
+  subjunctive: "All subjunctive tenses",
+  perfect: "All perfect tenses",
+  all: "All tenses",
+};
+
 export type VerbEndingFr = "er" | "ir" | "re";
 
 export function verbEndingFr(infinitive: string): VerbEndingFr {

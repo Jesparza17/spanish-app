@@ -16,6 +16,10 @@ import type { Language } from "./language";
 interface TenseTemplate {
   prefix: string; // goes before the subject pronoun (or before the blank, for imperativo)
   suffix: string; // goes after the (infinitivo) hint
+  // English gloss of prefix/suffix, for a "what does this mean" tap in Fill
+  // Blank mode — only the fixed carrier text, never the blank itself.
+  prefixGloss?: string;
+  suffixGloss?: string;
 }
 
 // Lowercase canonical form — capitalized only when a template's prefix is
@@ -31,14 +35,14 @@ const ES_PRONOUNS: Record<string, string> = {
 
 const ES_TEMPLATES: Record<string, TenseTemplate> = {
   presente: { prefix: "", suffix: "" },
-  preterito: { prefix: "Ayer, ", suffix: "" },
-  imperfecto: { prefix: "Antes, ", suffix: " mucho" },
-  futuro: { prefix: "Mañana, ", suffix: "" },
-  condicional: { prefix: "En ese caso, ", suffix: "" },
-  presente_perfecto: { prefix: "Hoy ", suffix: "" },
-  presente_subjuntivo: { prefix: "Ojalá que ", suffix: "" },
-  imperfecto_subjuntivo: { prefix: "Si ", suffix: "" },
-  pluscuamperfecto_subjuntivo: { prefix: "Si ", suffix: " antes" },
+  preterito: { prefix: "Ayer, ", suffix: "", prefixGloss: "Yesterday," },
+  imperfecto: { prefix: "Antes, ", suffix: " mucho", prefixGloss: "Before,", suffixGloss: "a lot" },
+  futuro: { prefix: "Mañana, ", suffix: "", prefixGloss: "Tomorrow," },
+  condicional: { prefix: "En ese caso, ", suffix: "", prefixGloss: "In that case," },
+  presente_perfecto: { prefix: "Hoy ", suffix: "", prefixGloss: "Today" },
+  presente_subjuntivo: { prefix: "Ojalá que ", suffix: "", prefixGloss: "I hope that / Hopefully" },
+  imperfecto_subjuntivo: { prefix: "Si ", suffix: "", prefixGloss: "If" },
+  pluscuamperfecto_subjuntivo: { prefix: "Si ", suffix: " antes", prefixGloss: "If", suffixGloss: "beforehand" },
 };
 
 const PT_PRONOUNS: Record<string, string> = {
@@ -50,12 +54,12 @@ const PT_PRONOUNS: Record<string, string> = {
 
 const PT_TEMPLATES: Record<string, TenseTemplate> = {
   presente: { prefix: "", suffix: "" },
-  preterito_perfeito: { prefix: "Ontem, ", suffix: "" },
-  imperfeito: { prefix: "Antes, ", suffix: " muito" },
-  futuro_do_presente: { prefix: "Amanhã, ", suffix: "" },
-  futuro_do_preterito: { prefix: "Nesse caso, ", suffix: "" },
-  presente_do_subjuntivo: { prefix: "Espero que ", suffix: "" },
-  preterito_perfeito_composto: { prefix: "Hoje ", suffix: "" },
+  preterito_perfeito: { prefix: "Ontem, ", suffix: "", prefixGloss: "Yesterday," },
+  imperfeito: { prefix: "Antes, ", suffix: " muito", prefixGloss: "Before,", suffixGloss: "a lot" },
+  futuro_do_presente: { prefix: "Amanhã, ", suffix: "", prefixGloss: "Tomorrow," },
+  futuro_do_preterito: { prefix: "Nesse caso, ", suffix: "", prefixGloss: "In that case," },
+  presente_do_subjuntivo: { prefix: "Espero que ", suffix: "", prefixGloss: "I hope that" },
+  preterito_perfeito_composto: { prefix: "Hoje ", suffix: "", prefixGloss: "Today" },
 };
 
 const FR_PRONOUNS: Record<string, string> = {
@@ -69,11 +73,11 @@ const FR_PRONOUNS: Record<string, string> = {
 
 const FR_TEMPLATES: Record<string, TenseTemplate> = {
   present: { prefix: "", suffix: "" },
-  passe_compose: { prefix: "", suffix: " hier" },
-  imparfait: { prefix: "Avant, ", suffix: " beaucoup" },
-  futur_simple: { prefix: "Demain, ", suffix: "" },
-  conditionnel_present: { prefix: "Dans ce cas, ", suffix: "" },
-  subjonctif_present: { prefix: "Il faut que ", suffix: "" },
+  passe_compose: { prefix: "", suffix: " hier", suffixGloss: "yesterday" },
+  imparfait: { prefix: "Avant, ", suffix: " beaucoup", prefixGloss: "Before,", suffixGloss: "a lot" },
+  futur_simple: { prefix: "Demain, ", suffix: "", prefixGloss: "Tomorrow," },
+  conditionnel_present: { prefix: "Dans ce cas, ", suffix: "", prefixGloss: "In that case," },
+  subjonctif_present: { prefix: "Il faut que ", suffix: "", prefixGloss: "It's necessary that / One must" },
 };
 
 const IMPERATIVE_TENSE: Record<Language, string> = { es: "imperativo", pt: "imperativo", fr: "imperatif" };
@@ -120,4 +124,17 @@ export function buildFillBlankPrompt(
   // pronoun that follows it stays lowercase.
   const pronoun = prefix === "" ? rawPronoun.charAt(0).toUpperCase() + rawPronoun.slice(1) : rawPronoun;
   return `${prefix}${pronoun} ___ (${infinitive})${suffix}.`;
+}
+
+/**
+ * English gloss of a Fill Blank template's fixed carrier text (the words
+ * surrounding the blank, e.g. "Ayer, " or " mucho") — not the blank itself.
+ * Returns null when the template has no prefix/suffix to gloss (e.g.
+ * presente, which has none).
+ */
+export function getTemplateGloss(language: Language, tense: string): { prefixGloss?: string; suffixGloss?: string } | null {
+  if (tense === IMPERATIVE_TENSE[language]) return null;
+  const template = templatesFor(language)[tense];
+  if (!template || (!template.prefixGloss && !template.suffixGloss)) return null;
+  return { prefixGloss: template.prefixGloss, suffixGloss: template.suffixGloss };
 }

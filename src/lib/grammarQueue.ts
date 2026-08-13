@@ -2,6 +2,8 @@ import { supabase } from "./supabaseClient";
 import {
   PERSONS,
   PERSON_LABELS,
+  TENSE_LABELS,
+  TENSE_GROUPS,
   conjugate,
   conjugateImperative,
   isFullySupported,
@@ -11,10 +13,13 @@ import {
   type Person,
   type Tense,
   type ConjugableTense,
+  type TenseGroupKey,
 } from "./conjugation";
 import {
   PERSONS_PT,
   PERSON_LABELS_PT,
+  TENSE_LABELS_PT,
+  TENSE_GROUPS_PT,
   conjugatePt,
   conjugateImperativePt,
   isFullySupportedPt,
@@ -26,6 +31,8 @@ import {
 import {
   PERSONS_FR,
   PERSON_LABELS_FR,
+  TENSE_LABELS_FR,
+  TENSE_GROUPS_FR,
   conjugateFr,
   conjugateImperativeFr,
   isFullySupportedFr,
@@ -172,6 +179,20 @@ export interface TenseQuestion {
   /** Raw person/polarity behind this question, for callers that want to build their own prompt (e.g. fill-in-the-blank). */
   person: string;
   polarity?: "affirmative" | "negative";
+  /** Which tense this particular question is testing — only set for grouped (multi-tense) sessions, where it varies per question. */
+  tense?: string;
+}
+
+/** Resolves a tense-group key to its member tense strings for the given language. */
+export function tensesForGroup(groupKey: TenseGroupKey, language: Language): string[] {
+  if (language === "pt") return TENSE_GROUPS_PT[groupKey];
+  if (language === "fr") return TENSE_GROUPS_FR[groupKey];
+  return TENSE_GROUPS[groupKey];
+}
+
+function tenseLabelFor(tense: string, language: Language): string {
+  const labels = language === "pt" ? TENSE_LABELS_PT : language === "fr" ? TENSE_LABELS_FR : TENSE_LABELS;
+  return (labels as Record<string, string>)[tense] ?? tense;
 }
 
 const IMPERATIVE_PERSONS: ImperativePerson[] = ["tu", "usted", "nosotros", "ustedes"];
@@ -197,13 +218,17 @@ function matchesCategory(formIsIrregular: boolean, category: VerbCategory): bool
  * conjugation.ts's isIrregularForm for why.
  */
 export async function buildTenseQuestions(
-  tense: string,
+  tense: string | string[],
   count: number,
   category: VerbCategory = "mix",
   language: Language = "es"
 ): Promise<TenseQuestion[]> {
   const pool = await fetchEligibleVerbs(language);
   if (!pool.length) return [];
+
+  if (Array.isArray(tense)) {
+    return buildGroupedTenseQuestions(pool, tense, count, category, language);
+  }
 
   if (language === "pt") {
     if (tense === "imperativo") {
@@ -369,6 +394,101 @@ export async function buildTenseQuestions(
   return questions;
 }
 
+/**
+ * Multi-tense variant for grouped practice ("all past tenses", etc.) —
+ * imperative is never a group member (see TENSE_GROUPS), so this only needs
+ * each language's regular (non-imperative) candidate-building path, just
+ * pooled across every member tense before a true shuffle-then-slice draw
+ * instead of buildTenseQuestions's per-draw random-with-replacement
+ * sampling, so the tense mix stays even across the group.
+ */
+async function buildGroupedTenseQuestions(
+  pool: EligibleVerb[],
+  tenses: string[],
+  count: number,
+  category: VerbCategory,
+  language: Language
+): Promise<TenseQuestion[]> {
+  if (language === "pt") {
+    const candidates: { verb: EligibleVerb; person: PersonPt; tense: string }[] = [];
+    for (const t of tenses) {
+      for (const verb of pool) {
+        for (const person of PERSONS_PT) {
+          const irregular = isIrregularFormPt(verb.infinitive, t as TensePt, person);
+          if (matchesCategory(irregular, category)) candidates.push({ verb, person, tense: t });
+        }
+      }
+    }
+    if (!candidates.length) return [];
+    const shuffled = shuffle(candidates);
+    return Array.from({ length: count }, (_, i) => {
+      const c = shuffled[i % shuffled.length];
+      const answer = conjugatePt(c.verb.infinitive, c.tense as ConjugableTensePt, c.person);
+      return {
+        verbId: c.verb.id,
+        infinitive: c.verb.infinitive,
+        translation: c.verb.translation,
+        prompt: `${c.verb.infinitive} — ${PERSON_LABELS_PT[c.person]} (${tenseLabelFor(c.tense, language)})`,
+        answer,
+        person: c.person,
+        tense: c.tense,
+      };
+    });
+  }
+
+  if (language === "fr") {
+    const candidates: { verb: EligibleVerb; person: PersonFr; tense: string }[] = [];
+    for (const t of tenses) {
+      for (const verb of pool) {
+        for (const person of PERSONS_FR) {
+          const irregular = isIrregularFormFr(verb.infinitive, t as TenseFr, person);
+          if (matchesCategory(irregular, category)) candidates.push({ verb, person, tense: t });
+        }
+      }
+    }
+    if (!candidates.length) return [];
+    const shuffled = shuffle(candidates);
+    return Array.from({ length: count }, (_, i) => {
+      const c = shuffled[i % shuffled.length];
+      const answer = conjugateFr(c.verb.infinitive, c.tense as ConjugableTenseFr, c.person);
+      return {
+        verbId: c.verb.id,
+        infinitive: c.verb.infinitive,
+        translation: c.verb.translation,
+        prompt: `${c.verb.infinitive} — ${PERSON_LABELS_FR[c.person]} (${tenseLabelFor(c.tense, language)})`,
+        answer,
+        person: c.person,
+        tense: c.tense,
+      };
+    });
+  }
+
+  const candidates: { verb: EligibleVerb; person: Person; tense: string }[] = [];
+  for (const t of tenses) {
+    for (const verb of pool) {
+      for (const person of PERSONS) {
+        const irregular = isIrregularForm(verb.infinitive, t as Tense, person);
+        if (matchesCategory(irregular, category)) candidates.push({ verb, person, tense: t });
+      }
+    }
+  }
+  if (!candidates.length) return [];
+  const shuffled = shuffle(candidates);
+  return Array.from({ length: count }, (_, i) => {
+    const c = shuffled[i % shuffled.length];
+    const answer = conjugate(c.verb.infinitive, c.tense as ConjugableTense, c.person);
+    return {
+      verbId: c.verb.id,
+      infinitive: c.verb.infinitive,
+      translation: c.verb.translation,
+      prompt: `${c.verb.infinitive} — ${PERSON_LABELS[c.person]} (${tenseLabelFor(c.tense, language)})`,
+      answer,
+      person: c.person,
+      tense: c.tense,
+    };
+  });
+}
+
 /** Case-insensitive, accent-sensitive — accents are grammatically meaningful (hablo vs. habló). */
 export function isCorrectAnswer(input: string, accepted: string[]): boolean {
   const normalized = input.trim().toLowerCase();
@@ -377,7 +497,7 @@ export function isCorrectAnswer(input: string, accepted: string[]): boolean {
 
 async function upsertProgress(
   userId: string,
-  scopeType: "topic" | "tense" | "combined",
+  scopeType: "topic" | "tense" | "combined" | "tense_group",
   scopeKey: string,
   patch: { correctDelta: number; attemptDelta: number; bestTestScore?: number }
 ) {
@@ -422,6 +542,11 @@ export function tenseScopeKey(tense: string, language: Language): string {
   return language === "es" ? tense : `${language}:${tense}`;
 }
 
+/** Same collision rationale as tenseScopeKey, applied to group keys ("present"/"past"/etc.) instead of individual tense names. */
+export function tenseGroupScopeKey(groupKey: TenseGroupKey, language: Language): string {
+  return language === "es" ? groupKey : `${language}:${groupKey}`;
+}
+
 /** Verbos "Test" mode only — practice mode never calls this, so drilling freely doesn't move the progress ring. */
 export async function recordTenseTestResult(userId: string, tense: string, correct: number, total: number, language: Language = "es") {
   await upsertProgress(userId, "tense", tenseScopeKey(tense, language), {
@@ -430,6 +555,22 @@ export async function recordTenseTestResult(userId: string, tense: string, corre
     bestTestScore: total > 0 ? correct / total : 0,
   });
   await logReviewEvent(userId, "tense_test");
+}
+
+/** Verbos "Test" mode for a tense group ("all past tenses", etc.) — its own scope, separate from any single member tense's progress. */
+export async function recordTenseGroupTestResult(
+  userId: string,
+  groupKey: TenseGroupKey,
+  correct: number,
+  total: number,
+  language: Language = "es"
+) {
+  await upsertProgress(userId, "tense_group", tenseGroupScopeKey(groupKey, language), {
+    correctDelta: correct,
+    attemptDelta: total,
+    bestTestScore: total > 0 ? correct / total : 0,
+  });
+  await logReviewEvent(userId, "tense_group_test");
 }
 
 /** Gramática "Test" mode for a single topic — separate from Practice's per-question recordTopicAttempt, this is what moves best_test_score. */

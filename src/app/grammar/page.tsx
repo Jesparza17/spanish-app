@@ -5,17 +5,19 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import AuthGate from "@/components/AuthGate";
-import { fetchGrammarProgress, fetchGrammarTopics, tenseScopeKey } from "@/lib/grammarQueue";
-import { CORE_TENSES, TENSE_CEFR_LEVELS, TENSE_LABELS } from "@/lib/conjugation";
-import { CORE_TENSES_PT, TENSE_CEFR_LEVELS_PT, TENSE_LABELS_PT } from "@/lib/conjugationPt";
-import { CORE_TENSES_FR, TENSE_CEFR_LEVELS_FR, TENSE_LABELS_FR } from "@/lib/conjugationFr";
+import { fetchGrammarProgress, fetchGrammarTopics, tenseScopeKey, tenseGroupScopeKey } from "@/lib/grammarQueue";
+import { CORE_TENSES, TENSE_CEFR_LEVELS, TENSE_LABELS, TENSE_GROUPS, TENSE_GROUP_LABELS, type TenseGroupKey } from "@/lib/conjugation";
+import { CORE_TENSES_PT, TENSE_CEFR_LEVELS_PT, TENSE_LABELS_PT, TENSE_GROUP_LABELS_PT, TENSE_GROUPS_PT } from "@/lib/conjugationPt";
+import { CORE_TENSES_FR, TENSE_CEFR_LEVELS_FR, TENSE_LABELS_FR, TENSE_GROUP_LABELS_FR, TENSE_GROUPS_FR } from "@/lib/conjugationFr";
 import { useLanguage } from "@/lib/language";
 import type { GrammarProgress, GrammarTopic } from "@/lib/types";
 
-function progressPct(progress: GrammarProgress[], scopeType: "topic" | "tense", scopeKey: string): number | null {
+const GROUP_KEYS: TenseGroupKey[] = ["present", "past", "subjunctive", "perfect", "all"];
+
+function progressPct(progress: GrammarProgress[], scopeType: "topic" | "tense" | "tense_group", scopeKey: string): number | null {
   const row = progress.find((p) => p.scopeType === scopeType && p.scopeKey === scopeKey);
   if (!row) return null;
-  if (scopeType === "tense") return row.bestTestScore !== null ? Math.round(row.bestTestScore * 100) : null;
+  if (scopeType === "tense" || scopeType === "tense_group") return row.bestTestScore !== null ? Math.round(row.bestTestScore * 100) : null;
   return row.attemptCount > 0 ? Math.round((row.correctCount / row.attemptCount) * 100) : null;
 }
 
@@ -31,6 +33,8 @@ function GrammarHome({ user }: { user: User }) {
   const tenseLabels: Record<string, string> = language === "pt" ? TENSE_LABELS_PT : language === "fr" ? TENSE_LABELS_FR : TENSE_LABELS;
   const tenseCefr: Record<string, string> =
     language === "pt" ? TENSE_CEFR_LEVELS_PT : language === "fr" ? TENSE_CEFR_LEVELS_FR : TENSE_CEFR_LEVELS;
+  const groupLabels = language === "pt" ? TENSE_GROUP_LABELS_PT : language === "fr" ? TENSE_GROUP_LABELS_FR : TENSE_GROUP_LABELS;
+  const groups = language === "pt" ? TENSE_GROUPS_PT : language === "fr" ? TENSE_GROUPS_FR : TENSE_GROUPS;
 
   useEffect(() => {
     setLoading(true);
@@ -113,6 +117,26 @@ function GrammarHome({ user }: { user: User }) {
           </div>
         ) : (
           <div className="flex flex-col gap-2">
+            {GROUP_KEYS.map((key) => {
+              const pct = progressPct(progress, "tense_group", tenseGroupScopeKey(key, language));
+              return (
+                <Link
+                  key={key}
+                  href={`/grammar/verbs/group/${key}`}
+                  className="flex items-center justify-between rounded-2xl bg-ink px-5 py-4 active:scale-[0.98] transition-transform"
+                >
+                  <span>
+                    <span className="block font-display text-base text-white">{groupLabels[key]}</span>
+                    <span className="block font-sans text-xs text-white/50 mt-0.5">{groups[key].length} tenses</span>
+                  </span>
+                  {pct !== null && (
+                    <span className="font-sans text-xs font-medium text-marigold bg-white/10 rounded-full px-2.5 py-1 shrink-0">
+                      {pct}%
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
             {tenses.map((tense) => {
               const pct = progressPct(progress, "tense", tenseScopeKey(tense, language));
               return (

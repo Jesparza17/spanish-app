@@ -52,23 +52,43 @@ export interface ActivityStats {
   reviewsThisWeek: number;
 }
 
+export interface BucketCounts {
+  new: number;
+  learning: number;
+  known: number;
+  mastered: number;
+  total: number;
+}
+
+export interface MasteryBucketStats {
+  vocab: BucketCounts;
+  verbs: BucketCounts;
+}
+
 export interface DashboardStats {
   vocabVerbs: VocabVerbStats;
   grammar: GrammarStats;
   verbos: VerbosStats;
   cefr: CefrStats;
   activity: ActivityStats;
+  masteryBuckets: MasteryBucketStats;
 }
 
 const EMPTY_LEVEL_COUNTS: Record<CefrLevel, number> = { A1: 0, A2: 0, B1: 0, B2: 0, C1: 0, C2: 0 };
 const LEVEL_ORDER: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
 // You need to have actually retained a word (not just seen it once) for it to
-// count toward your level — repetitions >= 2, or a long/mastered interval so
-// the "I know this 100%" button counts immediately instead of needing a
-// second successful review first.
+// count toward your level — repetitions >= 2, or an interval that's already
+// grown long through normal review.
 const KNOWN_MIN_REPETITIONS = 2;
 const KNOWN_MIN_INTERVAL_DAYS = 365;
+
+// Mastery-bucket thresholds for the dashboard widget — every item is earned
+// purely through normal SM-2 review (no shortcut jumps the interval), so
+// these are a starting proposal, easy to retune once real distributions are
+// visible.
+const LEARNING_MAX_INTERVAL_DAYS = 21;
+const KNOWN_MAX_INTERVAL_DAYS = 180;
 
 // How much of a level's vocab+verbs you need to have retained to count as
 // having "reached" that level. Coverage is noisy while the content library
@@ -125,6 +145,32 @@ async function fetchVocabVerbStats(userId: string, language: Language): Promise<
     knownVocabByLevel,
     knownVerbByLevel,
   };
+}
+
+async function fetchMasteryBuckets(userId: string, language: Language): Promise<MasteryBucketStats> {
+  async function bucketCounts(table: "vocab_items" | "verbs"): Promise<BucketCounts> {
+    const base = () => supabase.from("srs_state").select(`${table}!inner(language)`, { count: "exact", head: true }).eq("user_id", userId).eq(`${table}.language`, language);
+
+    const [{ count: total }, { count: newCount }, { count: learningCount }, { count: knownCount }, { count: masteredCount }] =
+      await Promise.all([
+        base(),
+        base().eq("repetitions", 0),
+        base().gte("repetitions", 1).lt("interval_days", LEARNING_MAX_INTERVAL_DAYS),
+        base().gte("interval_days", LEARNING_MAX_INTERVAL_DAYS).lt("interval_days", KNOWN_MAX_INTERVAL_DAYS),
+        base().gte("interval_days", KNOWN_MAX_INTERVAL_DAYS),
+      ]);
+
+    return {
+      new: newCount ?? 0,
+      learning: learningCount ?? 0,
+      known: knownCount ?? 0,
+      mastered: masteredCount ?? 0,
+      total: total ?? 0,
+    };
+  }
+
+  const [vocab, verbs] = await Promise.all([bucketCounts("vocab_items"), bucketCounts("verbs")]);
+  return { vocab, verbs };
 }
 
 async function fetchLevelTotals(language: Language): Promise<Record<CefrLevel, number>> {
@@ -266,12 +312,13 @@ async function fetchActivityStats(userId: string): Promise<ActivityStats> {
 }
 
 export async function fetchDashboardStats(userId: string, language: Language = "es"): Promise<DashboardStats> {
-  const [vocabVerbs, levelTotals, topics, progress, activity] = await Promise.all([
+  const [vocabVerbs, levelTotals, topics, progress, activity, masteryBuckets] = await Promise.all([
     fetchVocabVerbStats(userId, language),
     fetchLevelTotals(language),
     fetchGrammarTopics(language),
     fetchGrammarProgress(userId),
     fetchActivityStats(userId),
+    fetchMasteryBuckets(userId, language),
   ]);
   return {
     vocabVerbs,
@@ -279,5 +326,6 @@ export async function fetchDashboardStats(userId: string, language: Language = "
     verbos: computeVerbosStats(progress, language),
     cefr: computeCefrStats(levelTotals, vocabVerbs.knownByLevel),
     activity,
+    masteryBuckets,
   };
 }

@@ -5,7 +5,8 @@ import type { ReviewCard } from "./types";
 
 export type ReviewMode =
   | { type: "frequency" } // all due items, most-overdue first, then most-frequent as tiebreaker
-  | { type: "theme"; themeId: string }; // this week's themed list
+  | { type: "theme"; themeId: string } // this week's themed list
+  | { type: "frequencyRange"; min: number; max: number }; // verbs only — cap the pool to a frequency band
 
 const MAX_QUEUE_SIZE = 30;
 
@@ -77,6 +78,11 @@ async function fetchDueVerbs(userId: string, mode: ReviewMode, language: Languag
 
   if (mode.type === "theme") {
     query = query.eq("verbs.verb_themes.theme_id", mode.themeId);
+  } else if (mode.type === "frequencyRange") {
+    query = query
+      .gte("verbs.frequency_rank", mode.min)
+      .lte("verbs.frequency_rank", mode.max)
+      .order("frequency_rank", { foreignTable: "verbs", ascending: true, nullsFirst: false });
   } else {
     query = query.order("frequency_rank", { foreignTable: "verbs", ascending: true, nullsFirst: false });
   }

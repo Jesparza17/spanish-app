@@ -75,6 +75,27 @@ export const TENSE_CEFR_LEVELS: Record<Tense, CefrLevel> = {
   pluscuamperfecto_subjuntivo: "C1",
 };
 
+// Broader groupings for practice/test — imperativo is deliberately excluded
+// from every group (it has its own person set/polarity, handled entirely
+// separately in grammarQueue.ts).
+export type TenseGroupKey = "present" | "past" | "subjunctive" | "perfect" | "all";
+
+export const TENSE_GROUPS: Record<TenseGroupKey, ConjugableTense[]> = {
+  present: ["presente"],
+  past: ["preterito", "imperfecto"],
+  subjunctive: ["presente_subjuntivo", "imperfecto_subjuntivo", "pluscuamperfecto_subjuntivo"],
+  perfect: ["presente_perfecto", "pluscuamperfecto_subjuntivo"],
+  all: CORE_TENSES.filter((t): t is ConjugableTense => t !== "imperativo"),
+};
+
+export const TENSE_GROUP_LABELS: Record<TenseGroupKey, string> = {
+  present: "All present tenses",
+  past: "All past tenses",
+  subjunctive: "All subjunctive tenses",
+  perfect: "All perfect tenses",
+  all: "All tenses",
+};
+
 export type VerbEnding = "ar" | "er" | "ir";
 
 export function verbEnding(infinitive: string): VerbEnding {

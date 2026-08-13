@@ -6,7 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { Flame } from "lucide-react";
 import AuthGate from "@/components/AuthGate";
 import ActivityHeatmap from "@/components/ActivityHeatmap";
-import { fetchDashboardStats, type DashboardStats } from "@/lib/dashboard";
+import { fetchDashboardStats, type DashboardStats, type BucketCounts } from "@/lib/dashboard";
 import { useLanguage, type Language } from "@/lib/language";
 import type { CefrLevel } from "@/lib/types";
 
@@ -17,6 +17,35 @@ const LANGUAGES: { code: Language; flag: string; label: string }[] = [
 ];
 
 const LEVELS: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
+
+const MASTERY_LEGEND: { key: keyof Omit<BucketCounts, "total">; label: string; barClass: string; dotClass: string }[] = [
+  { key: "new", label: "Nuevo", barClass: "bg-ink/15", dotClass: "bg-ink/15" },
+  { key: "learning", label: "Aprendiendo", barClass: "bg-ink/40", dotClass: "bg-ink/40" },
+  { key: "known", label: "Sabido", barClass: "bg-agave", dotClass: "bg-agave" },
+  { key: "mastered", label: "Dominado", barClass: "bg-marigold", dotClass: "bg-marigold" },
+];
+
+function MasteryBar({ label, buckets }: { label: string; buckets: BucketCounts }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="font-sans text-xs text-ink/55">{label}</p>
+        <p className="font-sans text-[10px] text-ink/40">
+          {buckets.known + buckets.mastered}/{buckets.total} sabidas
+        </p>
+      </div>
+      {buckets.total === 0 ? (
+        <div className="h-2 rounded-full bg-ink/8" />
+      ) : (
+        <div className="h-2 rounded-full overflow-hidden flex">
+          {MASTERY_LEGEND.map(({ key, barClass }) => (
+            <div key={key} className={barClass} style={{ width: `${(buckets[key] / buckets.total) * 100}%` }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Dashboard({ user }: { user: User }) {
   const { language, setLanguage } = useLanguage();
@@ -91,6 +120,22 @@ function Dashboard({ user }: { user: User }) {
                 Racha más larga: {stats.activity.longestStreakDays} días · {stats.activity.totalReviews} repasos en
                 total · {stats.activity.reviewsThisWeek} esta semana
               </p>
+            </div>
+
+            <div className="rounded-2xl bg-card shadow-card px-5 py-5">
+              <p className="font-display text-lg text-ink mb-4">Dominio</p>
+              <div className="space-y-4">
+                <MasteryBar label="Vocab" buckets={stats.masteryBuckets.vocab} />
+                <MasteryBar label="Verbos" buckets={stats.masteryBuckets.verbs} />
+              </div>
+              <div className="flex items-center gap-3 mt-4 flex-wrap">
+                {MASTERY_LEGEND.map(({ key, label, dotClass }) => (
+                  <span key={key} className="inline-flex items-center gap-1.5 font-sans text-[10px] text-ink/45">
+                    <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
+                    {label}
+                  </span>
+                ))}
+              </div>
             </div>
 
             <Link href="/vocab" className="block rounded-2xl bg-card shadow-card px-5 py-5 active:scale-[0.98] transition-transform">

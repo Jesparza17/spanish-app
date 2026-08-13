@@ -70,6 +70,25 @@ export const TENSE_CEFR_LEVELS_PT: Record<TensePt, CefrLevel> = {
   preterito_perfeito_composto: "B1",
 };
 
+// See conjugation.ts's TENSE_GROUPS for the rationale — imperativo excluded.
+export type TenseGroupKey = "present" | "past" | "subjunctive" | "perfect" | "all";
+
+export const TENSE_GROUPS_PT: Record<TenseGroupKey, ConjugableTensePt[]> = {
+  present: ["presente"],
+  past: ["preterito_perfeito", "imperfeito"],
+  subjunctive: ["presente_do_subjuntivo"],
+  perfect: ["preterito_perfeito_composto"],
+  all: CORE_TENSES_PT.filter((t): t is ConjugableTensePt => t !== "imperativo"),
+};
+
+export const TENSE_GROUP_LABELS_PT: Record<TenseGroupKey, string> = {
+  present: "All present tenses",
+  past: "All past tenses",
+  subjunctive: "All subjunctive tenses",
+  perfect: "All perfect tenses",
+  all: "All tenses",
+};
+
 export type VerbEndingPt = "ar" | "er" | "ir";
 
 export function verbEndingPt(infinitive: string): VerbEndingPt {

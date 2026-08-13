@@ -73,7 +73,7 @@ export interface GrammarExercise {
 }
 
 export interface GrammarProgress {
-  scopeType: "tense" | "topic" | "combined";
+  scopeType: "tense" | "topic" | "combined" | "tense_group";
   scopeKey: string;
   correctCount: number;
   attemptCount: number;
