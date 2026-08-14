@@ -88,13 +88,23 @@ Core tables (see `supabase/schema.sql` plus incremental migrations
   content types. `verified: boolean` marks whether an item passed the
   generate→verify pipeline (see below); everything inserted through the
   manual `insert-content.ts` path is written as `verified: true` on the
-  assumption a human/Claude-Code session already checked it.
+  assumption a human/Claude-Code session already checked it. `VocabInsert`
+  (and `insertVocab`) also carries an optional `gender?: "m" | "f"` field
+  for noun items — include it when confident of a word's gender, omit it
+  otherwise and it stays `null`.
 - `themes`, `vocab_item_themes`, `verb_themes` — optional thematic
   grouping, not heavily used.
 - `srs_state` — one row per user per item (vocab XOR verb), SM-2-variant
   fields (`ease_factor`, `interval_days`, `repetitions`, `due_at`). RLS:
   users only see their own rows; `vocab_items`/`verbs`/`themes` are
   public-read, service-role-write only.
+- `gender_srs_state` (`supabase/011_gender_srs.sql`) — same SM-2 shape as
+  `srs_state`, one row per user per noun, but kept in its own table because
+  gender mastery and vocab-meaning mastery are independent skills for the
+  same word. Lazily enrolled by `src/lib/genderQueue.ts` (a noun gets a row
+  only after its first answer; until then the `/grammar/gender` due-queue
+  treats it as new/always-due) rather than eagerly backfilled at insert
+  time, since there's no XOR-item-type constraint here to coordinate with.
 - `grammar_topics` (slug, title, category, `explanation_md`, `cefr_level`,
   `sort_order`, `language`) and `grammar_exercises` (topic-linked
   fill-in-blank cloze items) — see `supabase/002_grammar_pipeline.sql`
@@ -155,7 +165,12 @@ templates (`src/lib/fillBlankTemplates.ts`).
 
 This same pattern applies to anything with a "correct answer" a learner
 will be graded against — fill-in-blank templates, grammar exercise
-`accepted_answers`, etc.
+`accepted_answers`, etc. Note that a fill-in-blank tense drill's accepted
+answer is always computed live from the engine (`conjugate()`) at request
+time via `grammarQueue.ts`'s `buildTenseQuestions` — it is never
+re-derived or re-verified per exercise, since the verb's conjugation was
+already verified once when it entered the `verbs` table. Only genuinely
+new irregular forms need a fresh live-conjugator check.
 
 ## Content pipeline
 
@@ -200,6 +215,12 @@ Two ways content gets into `vocab_items`/`verbs`/`grammar_exercises`:
    *existence* a looked-up fact instead of a generated one — it doesn't
    replace verifying what gets drafted around a confirmed-real word (that
    still needs the same live-conjugator/naturalness check as always).
+
+   **Grammar exercises specifically** go through an extra mechanical gate
+   before the manual review step, since `grammar_exercises` content is a
+   recurring high-volume loop rather than one-time seed data (see
+   "Grammar exercise generation at scale" below for the full pipeline and
+   standing policy around it).
 2. **Optional, API-billed pipeline** (`scripts/generate-content.ts`,
    `npm run generate:vocab|verbs|grammar`): calls the Anthropic API
    directly with your own key, 3 independent fresh-context critic passes,
@@ -223,27 +244,32 @@ not from guessed "common-sense" frequency. `reviewQueue.ts`'s
 
 ### Current content volume (rough — check DB for live counts)
 
-Target: **1000 verbs / 4000 vocab per language**, **200+ exercises per
-grammar topic** — an explicit, large, long-term goal being approached
-incrementally, batch by batch, across many conversations. Don't expect to
-finish it in one sitting; each round is ~50–90 new verbs or vocab words
-per language, hand-drafted and dedup-checked. As of the last count:
+Target: **1000 verbs / 4000 vocab per language**, **300 exercises per
+grammar topic** (raised from the original 200+/topic target once the
+grammar-exercise pipeline below made higher volume tractable) — an
+explicit, large, long-term goal being approached incrementally, batch by
+batch, across many conversations. Don't expect to finish it in one
+sitting; each round is ~50–90 new verbs or vocab words per language (see
+"Grammar exercise generation at scale" below for the exercise-specific
+round size). As of the last count:
 
 | Language | Verbs | Vocab | Grammar topics | Grammar exercises |
 |---|---|---|---|---|
-| es | 569 | 1004 | 26 | 432 |
+| es | 569 | 1004 | 26 | 432+ (growing — see below) |
 | pt | 210 | 484 | 14 | 154 |
 | fr | 226 | 482 | 14 | 168 |
 
-Grammar exercises per topic are still well short of the 200+ target for
-every topic in every language — that's the ongoing content push.
+Grammar exercises per topic are still well short of the 1000/topic target
+for every topic in every language — that's the ongoing content push.
 
 **Sequencing policy**: when asked for more verb/vocab/exercise content
 with no language specified, **prioritize Spanish** until it hits the
-1000/4000/200-per-topic targets — Spanish is the primary-focus language
+1000/4000/300-per-topic targets — Spanish is the primary-focus language
 per this project's stated purpose, and finishing it first is more useful
 than spreading effort thin across all three. Once Spanish hits target,
-Portuguese and French get **equal** priority with each other.
+Portuguese and French get **equal** priority with each other. (Porting the
+grammar-exercise pipeline itself to pt/fr is tracked as a discrete task in
+PLAN.md, to be done before volume work shifts to those languages.)
 
 **This sequencing is always subordinate to the top rule of this file**
 (*correctness above velocity* — see the very first section). Never rush
@@ -251,6 +277,71 @@ Spanish content to hit these numbers faster at the cost of verification
 rigor. A wrong answer shown to the learner is worse than a slower content
 round — if a batch can't clear the verification discipline below, ship
 less, not wrong.
+
+## Grammar exercise generation at scale (1000/topic target)
+
+`grammar_exercises` content is the one part of the content pipeline that's
+both genuinely author-required (each item needs a real correctness/
+naturalness judgment, unlike tense-drill fill-blanks which are computed
+live from the already-verified conjugation engine — see "Verification
+discipline" above) and a recurring high-volume loop rather than one-time
+seed data. The pipeline:
+
+1. **Draft** a batch (web app or Haiku subagent — draft/verify split
+   applies here same as vocab/verbs above).
+2. **`npm run lint:grammar-batch -- <file.json>`** — runs before anything
+   reaches manual review, catches mechanical issues for free: multi-blank
+   prompts, Spain-register words (`vosotros`, etc. — see the register
+   blocklist note below), duplicate prompts (both within the batch and
+   against the live DB), empty/malformed `accepted_answers`, invalid CEFR
+   levels, and unknown topic slugs.
+3. **Full manual review** of every item that passes lint — 100% coverage
+   is the default (see the review-scaling note below for when that
+   changes).
+4. **`npm run insert:grammar-batch -- <file.json>`** to insert the
+   reviewed batch.
+5. **`npm run dump:db-snapshot -- <output.md>`** to refresh the
+   dedup-reference file for the next round.
+
+Standing policy for this pipeline as topics scale toward 1000/topic —
+apply each item as the need actually appears, don't front-load all of it
+before it's needed:
+
+- **When to stop full-reading every item.** 100% manual review stays the
+  default until a topic's review time is actually the bottleneck in a
+  session — not before. When it is, switch that topic to: full read on a
+  random ~15% sample of the batch (catches systemic drift, e.g. a whole
+  batch sliding off-register) + full read on anything
+  `lint:grammar-batch` flagged + full read on anything the drafting pass
+  itself flagged as low-confidence. Don't switch a topic to sampled review
+  until full review has run clean on a few of its batches first — trust is
+  earned per topic, not assumed project-wide.
+- **Lint catches structure, not logic — track the gap.**
+  `lint:grammar-batch` is mechanical (format, dupes, register blocklist).
+  It cannot catch a well-formed item where the *grammar logic* is wrong —
+  e.g. a `por_para` sentence where either answer would actually work, or a
+  `hay_vs_estar` item where new-vs-known is genuinely ambiguous. That
+  class only surfaces in manual review. When review catches a logic
+  error, note it — if logic errors are rare for a topic, that topic's
+  review cadence can loosen; if they're common, that topic needs tighter
+  drafting instructions before its review cadence loosens.
+- **The register blocklist is a living list, not a one-time setup.** Every
+  time manual review catches a new Spain-register word, filler, or
+  off-register phrasing lint didn't catch, add it to the blocklist in the
+  same session — don't let it slide as a one-off manual fix.
+- **Batch/round sizing**: target ~100 exercises per topic per round —
+  large enough to be efficient, small enough that a bad round doesn't cost
+  hundreds of items. Revisit this number once a few rounds have actually
+  run at 100 — if review or lint-fix time balloons at that size, shrink
+  it; if it stays comfortable, leave it as-is.
+
+See `PLAN.md` for the two discrete build tasks that extend this pipeline —
+porting `lint:grammar-batch`'s register blocklist and dedup logic to
+Portuguese and French, and shape-template-assisted drafting for
+structurally-repeatable topics (`possessives`, `demonstratives`,
+`hay_vs_estar`, etc.) — each with its own done-when criteria; they
+graduate into a one-line mention here (like the conjugation-engines table
+above) once built, rather than staying as open plan items.
 
 ## Language of explanations
 
@@ -298,7 +389,11 @@ effortful recall, 4–5 = easy), same shape as Anki. There is no "I already
 know this" shortcut — every item's interval is earned purely through the
 normal grade progression, by design (removed the old `masterItem()`
 bypass so mastery-bucket stats on the dashboard reflect real review
-history, not shortcut jumps).
+history, not shortcut jumps). The género drill (`/grammar/gender`,
+`src/lib/genderQueue.ts`) reuses this same engine against
+`gender_srs_state` instead of self-reported 0-5 grades — its choice
+buttons are auto-graded (correct → 4, incorrect → 1) since there's no
+reveal-then-self-assess step in a binary el/la quiz.
 
 ## TTS
 
@@ -337,6 +432,8 @@ npm run build                            # type-check + production build — run
 npm run seed:grammar-topics              # re-seed topic list after editing a *.seed.ts file
 npm run insert:content -- vocab|verbs <file.json> --language es|pt|fr
 npm run insert:grammar-batch -- <file.json>
+npm run lint:grammar-batch -- <file.json>   # run before insert:grammar-batch — see "Grammar exercise generation at scale"
+npm run dump:db-snapshot -- <output.md>     # refresh dedup-reference file after inserting a grammar batch
 ```
 
 ## Working style for this project

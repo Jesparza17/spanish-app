@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { User } from "@supabase/supabase-js";
 import AuthGate from "@/components/AuthGate";
 import SpeakButton from "@/components/SpeakButton";
-import { fetchGenderPool, type GenderNoun } from "@/lib/glossary";
+import { fetchDueGenderQueue, submitGenderGrade } from "@/lib/genderQueue";
+import type { GenderNoun } from "@/lib/glossary";
 import { useLanguage, type Language } from "@/lib/language";
 
 const GENDER_ARTICLES: Record<Language, { m: string; f: string }> = {
@@ -12,21 +14,14 @@ const GENDER_ARTICLES: Record<Language, { m: string; f: string }> = {
   fr: { m: "le", f: "la" },
 };
 
-function shuffle<T>(arr: T[]): T[] {
-  const copy = [...arr];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
 const FEEDBACK_DELAY_MS = 500;
+const GRADE_CORRECT = 4;
+const GRADE_INCORRECT = 1;
 
-function GenderDrill() {
+function GenderDrill({ user }: { user: User }) {
   const { language } = useLanguage();
-  const [pool, setPool] = useState<GenderNoun[]>([]);
-  const [index, setIndex] = useState(0);
+  const [queue, setQueue] = useState<GenderNoun[]>([]);
+  const [poolSize, setPoolSize] = useState(0);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
@@ -34,20 +29,20 @@ function GenderDrill() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const nouns = await fetchGenderPool(language);
-    setPool(shuffle(nouns));
-    setIndex(0);
+    const { due, totalPoolSize } = await fetchDueGenderQueue(user.id, language);
+    setQueue(due);
+    setPoolSize(totalPoolSize);
     setCorrectCount(0);
     setTotalCount(0);
     setFeedback(null);
     setLoading(false);
-  }, [language]);
+  }, [user.id, language]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const current = pool[index];
+  const current = queue[0];
   const articles = GENDER_ARTICLES[language];
 
   async function handleChoice(choice: "m" | "f") {
@@ -57,16 +52,11 @@ function GenderDrill() {
     setTotalCount((n) => n + 1);
     if (correct) setCorrectCount((n) => n + 1);
 
-    setTimeout(async () => {
+    await submitGenderGrade(user.id, current.id, correct ? GRADE_CORRECT : GRADE_INCORRECT);
+
+    setTimeout(() => {
       setFeedback(null);
-      const nextIndex = index + 1;
-      if (nextIndex >= pool.length) {
-        const more = await fetchGenderPool(language);
-        setPool(shuffle(more));
-        setIndex(0);
-      } else {
-        setIndex(nextIndex);
-      }
+      setQueue((q) => q.slice(1));
     }, FEEDBACK_DELAY_MS);
   }
 
@@ -75,7 +65,9 @@ function GenderDrill() {
       <header className="bg-ink-shell safe-top">
         <div className="max-w-md mx-auto px-6 pt-8 pb-10">
           <p className="font-sans text-xs tracking-[0.2em] text-marigold uppercase mb-2">Gramática</p>
-          <h1 className="font-display text-3xl text-white">Género</h1>
+          <h1 className="font-display text-3xl text-white">
+            {!loading && poolSize > 0 ? (queue.length > 0 ? `${queue.length} due` : "All caught up") : "Género"}
+          </h1>
         </div>
       </header>
 
@@ -91,7 +83,9 @@ function GenderDrill() {
         ) : !current ? (
           <div className="rounded-2xl bg-card shadow-card px-6 py-10 text-center">
             <p className="font-sans text-sm text-ink/60">
-              No gender-tagged nouns yet for this language — run the gender backfill first.
+              {poolSize === 0
+                ? "No gender-tagged nouns yet for this language — run the gender backfill first."
+                : "Nothing due right now — check back later."}
             </p>
           </div>
         ) : (
@@ -134,5 +128,5 @@ function GenderDrill() {
 }
 
 export default function GenderPage() {
-  return <AuthGate>{() => <GenderDrill />}</AuthGate>;
+  return <AuthGate>{(user) => <GenderDrill user={user} />}</AuthGate>;
 }

@@ -61,6 +61,7 @@ export async function fetchGrammarTopics(language: Language = "es"): Promise<Gra
     .from("grammar_topics")
     .select("id, slug, title, category, explanation_md, cefr_level, sort_order")
     .eq("language", language)
+    .order("cefr_level", { ascending: true })
     .order("sort_order", { ascending: true });
   if (error) throw error;
   return (data ?? []).map((row: any) => ({
